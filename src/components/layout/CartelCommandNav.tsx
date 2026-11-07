@@ -11,6 +11,7 @@ import {
   IdCard,
   Menu,
   ScanLine,
+  Sparkles,
   Store,
   Trophy,
   Users,
@@ -45,6 +46,7 @@ const NAV: NavEntry[] = [
   { index: '06', label: 'Inventory & Higgsfield', href: '/admin/inventory', icon: Boxes, group: 'ADMIN' },
   { index: '07', label: 'CRM & KYC Queue', href: '/admin/crm', icon: Users, group: 'ADMIN' },
   { index: '08', label: 'Loyalty & Affiliates', href: '/admin/loyalty', icon: Trophy, group: 'ADMIN' },
+  { index: '09', label: 'AI Vault Sommelier', href: '/agent', icon: Sparkles, group: 'MEMBER' },
 ];
 
 const GROUP_LABEL: Record<NavEntry['group'], string> = {

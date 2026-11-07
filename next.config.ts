@@ -4,8 +4,7 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : undefined;
 
-const isStaticExport =
-  process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL;
+const isStaticExport = process.env.VERCEL_STATIC_EXPORT === '1';
 
 const nextConfig: NextConfig = {
   output: isStaticExport ? 'export' : undefined,

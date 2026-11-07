@@ -9,7 +9,6 @@ build/
 next-env.d.ts
 .DS_Store
 .vercel
+.agents/
 supabase/.temp/
 supabase/.branches/
-
-.vercel
