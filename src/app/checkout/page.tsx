@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -43,7 +43,9 @@ import {
   useCartStore,
 } from '@/lib/store/cart';
 import { isVerifiedMember, useSessionStore } from '@/lib/store/session';
+import { attachPlacesAutocomplete } from '@/lib/delivery-zone-engine';
 import { LEGAL_AGE } from '@/lib/sa-id';
+import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import type {
   BaseUom,
@@ -149,7 +151,7 @@ export default function CheckoutPage() {
   const clearCart = useCartStore((state) => state.clear);
 
   const subtotalCents = useCartStore(selectCartSubtotalCents);
-  const uomTotals = useCartStore(selectCartUomTotals);
+  const uomTotals = useCartStore(useShallow(selectCartUomTotals));
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CARD_TERMINAL');
   const [pickupWindow, setPickupWindow] = useState<'NOW_60' | 'THIS_EVENING' | 'TOMORROW_NOON'>(
@@ -235,6 +237,49 @@ export default function CheckoutPage() {
     },
     [setDelivery],
   );
+
+  /**
+   * Google Places Autocomplete on the street address.
+   *
+   * Typing an address by hand cannot produce coordinates, and the zone fee is
+   * decided by coordinates - so a hand-typed address previously fell back to
+   * the hub's own lat/lng and could be quoted the wrong ring. Picking a
+   * suggestion writes Google's real coordinates, which is what
+   * `resolve_delivery_zone` then measures against.
+   *
+   * Without NEXT_PUBLIC_GOOGLE_MAPS_API_KEY the attach resolves to null and the
+   * quick-zone presets remain the way in, rather than a dead field.
+   */
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (fulfilment !== 'DELIVERY') return;
+    const input = addressInputRef.current;
+    if (!input) return;
+
+    let detach: (() => void) | null = null;
+    let cancelled = false;
+
+    void attachPlacesAutocomplete(input, (place) => {
+      setDelivery({
+        address: place.formattedAddress,
+        suburb: place.suburb ?? place.city,
+        lat: place.lat,
+        lng: place.lng,
+      });
+    }).then((teardown) => {
+      if (cancelled) {
+        teardown?.();
+        return;
+      }
+      detach = teardown;
+    });
+
+    return () => {
+      cancelled = true;
+      detach?.();
+    };
+  }, [fulfilment, setDelivery]);
 
   const handleCompleteOrder = useCallback(async () => {
     if (!member || !isVerifiedMember(member)) {
@@ -640,6 +685,8 @@ export default function CheckoutPage() {
                       >
                         <Input
                           id="delivery_address"
+                          ref={addressInputRef}
+                          autoComplete="off"
                           value={deliveryAddress}
                           onChange={(e) =>
                             setDelivery({

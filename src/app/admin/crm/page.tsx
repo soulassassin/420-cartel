@@ -1,397 +1,210 @@
-'use client';
-
-import { useCallback, useMemo, useState } from 'react';
-import {
-  Ban,
-  Check,
-  Crown,
-  Loader2,
-  Search,
-  ShieldCheck,
-  Wallet,
-} from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { ArrowUpRight, Clock, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Field, Input } from '@/components/ui/field';
-import { Badge, Card, EmptyState, Eyebrow, Separator, Stat } from '@/components/ui/surfaces';
-import { CartelMemberQrPass } from '@/components/crm/CartelMemberQrPass';
+import { Input } from '@/components/ui/field';
+import { Badge, Card, EmptyState, Eyebrow, Stat } from '@/components/ui/surfaces';
 import { formatCents } from '@/lib/money';
 import { RANK_LABEL } from '@/lib/loyalty';
-import { formatSaId, parseSaId } from '@/lib/sa-id';
-import {
-  adjustMemberCredit,
-  listMembers,
-  setMemberStatus,
-} from '@/lib/data/source';
-import { useCartelQuery } from '@/lib/data/useCartelQuery';
+import { LEGAL_AGE, ageInYears } from '@/lib/sa-id';
+import { createCartelServerClient, getViewer } from '@/lib/supabase/server';
+import { cn } from '@/lib/utils';
 import type { MemberRow, MemberStatus } from '@/types/database';
 
-/**
- * Module H — Member CRM, KYC Approval Queue & Store Credit Ledger.
- *
- * Allows collective reviewers to inspect 18+ KYC applications, approve or
- * elevate members to VIP standing, suspend passes, and credit/debit member
- * store credit balances.
- */
+export const metadata: Metadata = {
+  title: 'Member CRM',
+  robots: { index: false, follow: false },
+};
 
-type FilterTab = 'ALL' | MemberStatus;
+const STATUS_TONE: Record<MemberStatus, 'live' | 'warn' | 'gold' | 'danger'> = {
+  ACTIVE_MEMBER: 'live',
+  PENDING_KYC: 'warn',
+  VIP: 'gold',
+  SUSPENDED: 'danger',
+};
 
-const FILTERS: { key: FilterTab; label: string }[] = [
-  { key: 'ALL', label: 'All Members' },
-  { key: 'PENDING_KYC', label: 'Pending KYC' },
-  { key: 'ACTIVE_MEMBER', label: 'Active' },
-  { key: 'VIP', label: 'VIP' },
-  { key: 'SUSPENDED', label: 'Suspended' },
+const FILTERS: { key: string; label: string; status: MemberStatus | null }[] = [
+  { key: 'all', label: 'All', status: null },
+  { key: 'pending', label: 'Pending KYC', status: 'PENDING_KYC' },
+  { key: 'active', label: 'Active', status: 'ACTIVE_MEMBER' },
+  { key: 'vip', label: 'VIP', status: 'VIP' },
+  { key: 'suspended', label: 'Suspended', status: 'SUSPENDED' },
 ];
 
-export default function AdminCrmPage() {
-  const [filter, setFilter] = useState<FilterTab>('ALL');
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [creditRand, setCreditRand] = useState('250');
-  const [creditReason, setCreditReason] = useState('Complimentary collective allocation credit');
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default async function CrmPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; filter?: string }>;
+}) {
+  const viewer = await getViewer();
 
-  const membersQuery = useCartelQuery(() => listMembers(), []);
-  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  // Middleware already bounced signed-out visitors; this covers a signed-in
+  // member who guessed the URL.
+  if (!viewer.isStaff) redirect('/');
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return members.filter((m) => {
-      if (filter !== 'ALL' && m.status !== filter) return false;
-      if (!needle) return true;
-      return (
-        m.member_code.toLowerCase().includes(needle) ||
-        `${m.first_name} ${m.last_name}`.toLowerCase().includes(needle) ||
-        m.email.toLowerCase().includes(needle) ||
-        m.phone.includes(needle) ||
-        (m.sa_id_number ?? '').includes(needle)
-      );
-    });
-  }, [members, filter, query]);
+  const params = await searchParams;
+  const search = params.q?.trim() ?? '';
+  const activeFilter = FILTERS.find((entry) => entry.key === params.filter) ?? FILTERS[0]!;
 
-  const selected = useMemo(
-    () => members.find((m) => m.id === selectedId) ?? filtered[0] ?? null,
-    [members, selectedId, filtered],
-  );
+  const supabase = await createCartelServerClient();
 
-  const saIdDetails = useMemo(
-    () => (selected?.sa_id_number ? parseSaId(selected.sa_id_number) : null),
-    [selected],
-  );
+  let query = supabase
+    .from('members')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
 
-  const handleStatusChange = useCallback(
-    async (memberId: string, status: MemberStatus) => {
-      setBusy(true);
-      setError(null);
-      try {
-        const updated = await setMemberStatus(
-          memberId,
-          status,
-          status === 'SUSPENDED' ? 'Suspended via CRM review' : null,
-        );
-        setNotice(`Updated ${updated.member_code} to ${updated.status}.`);
-        membersQuery.refresh();
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'Status update failed.');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [membersQuery],
-  );
+  if (activeFilter.status) query = query.eq('status', activeFilter.status);
+  if (search.length > 0) {
+    // Never search on sa_id_number — reviewers should not be able to fish for
+    // an ID number they do not already have.
+    query = query.or(
+      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,member_code.ilike.%${search}%`,
+    );
+  }
 
-  const handleCreditAdjust = useCallback(
-    async (sign: 1 | -1) => {
-      if (!selected) return;
-      const rands = Number.parseFloat(creditRand);
-      if (!Number.isFinite(rands) || rands <= 0) {
-        setError('Enter a valid Rand amount.');
-        return;
-      }
-      setBusy(true);
-      setError(null);
-      try {
-        const deltaCents = Math.round(rands * 100) * sign;
-        const updated = await adjustMemberCredit(
-          selected.id,
-          deltaCents,
-          creditReason.trim() || 'Admin credit adjustment',
-        );
-        setNotice(
-          `Updated ${updated.member_code} credit balance to ${formatCents(updated.credit_balance_cents)}.`,
-        );
-        membersQuery.refresh();
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'Credit adjustment failed.');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [selected, creditRand, creditReason, membersQuery],
-  );
+  const { data: memberRows } = await query;
+  const members: MemberRow[] = memberRows ?? [];
 
-  const pendingCount = useMemo(
-    () => members.filter((m) => m.status === 'PENDING_KYC').length,
-    [members],
-  );
+  const { count: pendingCount } = await supabase
+    .from('members')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'PENDING_KYC');
+
+  const { count: totalCount } = await supabase
+    .from('members')
+    .select('id', { count: 'exact', head: true });
 
   return (
-    <main className="min-h-screen bg-void pb-28 pt-12">
-      <div className="container">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Eyebrow>Back Office · Module H</Eyebrow>
-            <h1 className="mt-2 display-md text-white">
-              Member <span className="gold-text">CRM</span> & KYC Queue
-            </h1>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Verify 18+ South African ID and passport applications, manage VIP standing, and
-              administer member store credit balances.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Badge tone={pendingCount > 0 ? 'warn' : 'live'}>
-              {pendingCount} Pending KYC
-            </Badge>
-            <Badge tone="gold">{members.length} Total Members</Badge>
-          </div>
-        </header>
-
-        {notice ? (
-          <p className="mt-6 border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-mono text-xs text-emerald-300">
-            {notice}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-6 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-xs text-red-300">
-            {error}
-          </p>
-        ) : null}
-
-        {/* Filter bar */}
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-mono)] pb-4">
-          <div className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => (
-              <Button
-                key={f.key}
-                variant={filter === f.key ? 'active' : 'surface'}
-                size="sm"
-                onClick={() => setFilter(f.key)}
-              >
-                {f.label}
-              </Button>
-            ))}
-          </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search code, SA ID, phone..."
-              className="h-9 w-64 pl-9 font-mono text-xs"
+    <main className="content-layer mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-14">
+      {/* ---- Header ------------------------------------------------------ */}
+      <header className="flex flex-col gap-5">
+        <Eyebrow>Compliance Desk</Eyebrow>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <h1 className="display-md">Member CRM</h1>
+          <div className="flex gap-8">
+            <Stat label="Members" value={totalCount ?? 0} />
+            <Stat
+              label="Awaiting Review"
+              value={pendingCount ?? 0}
+              tone={pendingCount && pendingCount > 0 ? 'gold' : 'muted'}
             />
           </div>
         </div>
+      </header>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-12">
-          {/* Member list */}
-          <div className="space-y-2.5 lg:col-span-7">
-            {filtered.length === 0 ? (
-              <EmptyState
-                title="No members match that filter"
-                description="Try clearing the search query or switching status tabs."
-              />
-            ) : (
-              filtered.map((m) => {
-                const isSelected = selected?.id === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setSelectedId(m.id)}
-                    className={`flex w-full items-center justify-between border p-4 text-left transition-colors ${
-                      isSelected
-                        ? 'border-gold bg-gold/10'
-                        : 'border-[color:var(--border-mono)] bg-surface hover:border-gold/40'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2.5">
-                        <span className="font-display text-base uppercase text-white">
-                          {m.first_name} {m.last_name}
-                        </span>
-                        <span className="font-mono text-xs text-gold">{m.member_code}</span>
-                      </div>
-                      <p className="mt-1 font-mono text-[0.6875rem] text-muted-foreground">
-                        {m.email} · {m.phone} · DOB {m.date_of_birth}
-                      </p>
-                    </div>
+      {/* ---- Controls ---------------------------------------------------- */}
+      <div className="flex flex-col gap-4">
+        <form action="/admin/crm" className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <Input
+            name="q"
+            defaultValue={search}
+            placeholder="Name, email, phone or member code"
+            className="pl-11"
+            aria-label="Search members"
+          />
+          {params.filter ? <input type="hidden" name="filter" value={params.filter} /> : null}
+        </form>
 
-                    <div className="flex flex-col items-end gap-1.5">
-                      <Badge
-                        tone={
-                          m.status === 'VIP'
-                            ? 'gold'
-                            : m.status === 'ACTIVE_MEMBER'
-                              ? 'live'
-                              : m.status === 'PENDING_KYC'
-                                ? 'warn'
-                                : 'danger'
-                        }
-                      >
-                        {m.status.replace(/_/g, ' ')}
-                      </Badge>
-                      <span className="font-mono text-[0.625rem] uppercase tracking-[0.16em] text-faint">
-                        LTV {formatCents(m.lifetime_value_cents)} · {RANK_LABEL[m.rank]}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {/* Member inspector */}
-          <div className="lg:col-span-5">
-            {selected ? (
-              <Card className="space-y-6 p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Eyebrow>Member Dossier</Eyebrow>
-                    <h2 className="mt-1 font-display text-xl uppercase text-white">
-                      {selected.first_name} {selected.last_name}
-                    </h2>
-                    <p className="font-mono text-xs text-gold">{selected.member_code}</p>
-                  </div>
-                  <Badge tone={selected.status === 'VIP' ? 'gold' : 'live'}>
-                    {selected.status.replace(/_/g, ' ')}
-                  </Badge>
-                </div>
-
-                {/* Standing Controls */}
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    variant={selected.status === 'ACTIVE_MEMBER' ? 'active' : 'surface'}
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void handleStatusChange(selected.id, 'ACTIVE_MEMBER')}
-                  >
-                    <ShieldCheck className="size-3.5" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant={selected.status === 'VIP' ? 'active' : 'surface'}
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void handleStatusChange(selected.id, 'VIP')}
-                  >
-                    <Crown className="size-3.5" />
-                    Make VIP
-                  </Button>
-                  <Button
-                    variant={selected.status === 'SUSPENDED' ? 'destructive' : 'surface'}
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void handleStatusChange(selected.id, 'SUSPENDED')}
-                  >
-                    <Ban className="size-3.5" />
-                    Suspend
-                  </Button>
-                </div>
-
-                <Separator />
-
-                {/* Identity & LTV */}
-                <div className="grid grid-cols-2 gap-4">
-                  <Stat
-                    label="Lifetime Value"
-                    value={formatCents(selected.lifetime_value_cents)}
-                    tone="gold"
-                  />
-                  <Stat
-                    label="Store Credit"
-                    value={formatCents(selected.credit_balance_cents)}
-                  />
-                  <Stat
-                    label="Loyalty Points"
-                    value={selected.points_balance.toLocaleString('en-ZA')}
-                  />
-                  <Stat label="Rank" value={RANK_LABEL[selected.rank]} />
-                </div>
-
-                {saIdDetails && saIdDetails.valid ? (
-                  <div className="border border-[color:var(--border-mono)] bg-void p-3.5 font-mono text-xs">
-                    <p className="text-[0.625rem] uppercase tracking-[0.2em] text-gold">
-                      SA 13-Digit ID Checksum Verified
-                    </p>
-                    <p className="mt-1 text-muted-foreground">
-                      ID: {formatSaId(saIdDetails.normalized)} · {saIdDetails.age} yrs ·{' '}
-                      {saIdDetails.genderMarker} · {saIdDetails.citizenship}
-                    </p>
-                  </div>
-                ) : null}
-
-                <Separator />
-
-                {/* Store Credit Adjustment */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="size-4 text-gold" />
-                    <Eyebrow>Store Credit Ledger Adjustment</Eyebrow>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Amount (ZAR)" htmlFor="crm_credit_amt">
-                      <Input
-                        id="crm_credit_amt"
-                        type="number"
-                        value={creditRand}
-                        onChange={(e) => setCreditRand(e.target.value)}
-                        className="h-9 font-mono text-xs"
-                      />
-                    </Field>
-                    <Field label="Reason" htmlFor="crm_credit_reason">
-                      <Input
-                        id="crm_credit_reason"
-                        value={creditReason}
-                        onChange={(e) => setCreditReason(e.target.value)}
-                        className="h-9 text-xs"
-                      />
-                    </Field>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void handleCreditAdjust(1)}
-                    >
-                      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-                      Credit +{creditRand || '0'} ZAR
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void handleCreditAdjust(-1)}
-                    >
-                      Debit -{creditRand || '0'} ZAR
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-center">
-                  <CartelMemberQrPass member={selected} compact />
-                </div>
-              </Card>
-            ) : null}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map((filter) => {
+            const href =
+              filter.key === 'all'
+                ? `/admin/crm${search ? `?q=${encodeURIComponent(search)}` : ''}`
+                : `/admin/crm?filter=${filter.key}${search ? `&q=${encodeURIComponent(search)}` : ''}`;
+            return (
+              <Button
+                key={filter.key}
+                asChild
+                variant={filter.key === activeFilter.key ? 'active' : 'outline'}
+                size="sm"
+              >
+                <Link href={href}>{filter.label}</Link>
+              </Button>
+            );
+          })}
         </div>
       </div>
+
+      {/* ---- Results ----------------------------------------------------- */}
+      {members.length === 0 ? (
+        <EmptyState
+          title="No members found"
+          description={
+            search
+              ? `Nothing matches "${search}". Try a member code or phone number.`
+              : 'No members in this state yet.'
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {members.map((member) => {
+            const age = ageInYears(new Date(`${member.date_of_birth}T00:00:00Z`));
+            return (
+              <Card key={member.id} interactive className="p-0">
+                <Link
+                  href={`/admin/crm/${member.id}`}
+                  className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  {/* Identity */}
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-display text-base uppercase tracking-[0.1em]">
+                        {member.first_name} {member.last_name}
+                      </span>
+                      <Badge tone={STATUS_TONE[member.status]}>
+                        {member.status.replace('_', ' ')}
+                      </Badge>
+                      {member.age_verified_at === null ? (
+                        <Badge tone="danger">Age Unverified</Badge>
+                      ) : null}
+                      {member.agreement_signed_at === null ? (
+                        <Badge tone="warn">Unsigned</Badge>
+                      ) : null}
+                    </div>
+                    <span className="truncate font-mono text-[0.625rem] tracking-[0.14em] text-muted-foreground">
+                      {member.member_code} · {member.phone} · {member.email}
+                    </span>
+                  </div>
+
+                  {/* Standing */}
+                  <div className="flex shrink-0 items-end gap-6">
+                    <Stat
+                      label="Age"
+                      value={age}
+                      unit="yrs"
+                      tone={age < LEGAL_AGE ? 'gold' : 'muted'}
+                    />
+                    <Stat label="Rank" value={RANK_LABEL[member.rank]} tone="muted" />
+                    <Stat label="LTV" value={formatCents(member.lifetime_value_cents)} />
+                    <ArrowUpRight
+                      className={cn('size-4 shrink-0 text-faint transition-colors')}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </Link>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {members.length === 100 ? (
+        <p className="flex items-center gap-2 font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+          <Clock className="size-3" />
+          Showing the 100 most recent — narrow with search
+        </p>
+      ) : null}
+
+      {!viewer.isManager ? (
+        <p className="flex items-center gap-2 border-l-2 border-amber-500 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+          <Users className="size-3.5 shrink-0" />
+          You have read access. Approving KYC, adjusting credit and changing status require
+          owner or manager rights.
+        </p>
+      ) : null}
     </main>
   );
 }

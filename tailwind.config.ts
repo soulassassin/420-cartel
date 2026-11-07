@@ -15,7 +15,6 @@ const config: Config = {
         surface: 'var(--bg-surface)',
         elevated: 'var(--bg-elevated)',
         glass: 'var(--bg-glass)',
-        // Third-tier text, dimmer than muted-foreground: eyebrows and captions.
         faint: 'var(--text-faint)',
         gold: {
           DEFAULT: 'var(--accent-gold)',

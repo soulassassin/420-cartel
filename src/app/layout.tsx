@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Inter, JetBrains_Mono } from 'next/font/google';
 
 import { CartelCommandNav } from '@/components/layout/CartelCommandNav';
 import './globals.css';
@@ -12,26 +11,6 @@ import './globals.css';
  * loaded with tabular figures because every gram, millilitre and THC percentage
  * in the product surfaces renders in it.
  */
-
-const display = Archivo({
-  subsets: ['latin'],
-  weight: ['700', '800', '900'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const sans = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-mono',
-  display: 'swap',
-});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
@@ -86,11 +65,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en-ZA"
-      className={`${display.variable} ${sans.variable} ${mono.variable} dark`}
-      suppressHydrationWarning
-    >
+    <html lang="en-ZA" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        />
+      </head>
       <body className="min-h-screen bg-void font-sans text-foreground antialiased">
         {children}
         {/* Mounted on every route so any surface is one tap from any other. */}

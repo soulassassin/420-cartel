@@ -48,6 +48,13 @@ import {
 } from '@/lib/data/source';
 import { useCartelQuery } from '@/lib/data/useCartelQuery';
 import { DEFAULT_BRANCH_ID } from '@/lib/demo/fixtures';
+import { useHardwareScanner, type ScanEvent } from '@/hooks/useHardwareScanner';
+import {
+  ThermalReceiptPrint,
+  printThermalReceipt,
+  type ThermalReceiptTender,
+} from '@/components/pos/ThermalReceiptPrint';
+import { RANK_LABEL } from '@/lib/loyalty';
 import { cn } from '@/lib/utils';
 import type {
   BaseUom,
@@ -326,6 +333,58 @@ export default function PosTerminalPage() {
     catalogue,
     seededMembers,
   ]);
+
+  /**
+   * Hardware scanner routing.
+   *
+   * A USB/Bluetooth 2D scanner types its payload in a sub-35ms burst ending in
+   * Enter, which `useHardwareScanner` detects without the cashier focusing any
+   * field. A CARTEL-XXXX pass or a bare QR token attaches the member; anything
+   * else is treated as a product barcode and rung straight onto the ticket.
+   */
+  const handleScan = useCallback(
+    async (event: ScanEvent) => {
+      setError(null);
+
+      if (event.kind === 'MEMBER') {
+        try {
+          const matches = await lookupMembers(event.value);
+          const match = matches[0];
+          if (!match) {
+            setError(`No member pass matches ${event.value}.`);
+            return;
+          }
+          setSelectedMember(match);
+          setSearchResults([]);
+          setMemberSearch('');
+        } catch {
+          setError('Member lookup failed. Check the pass and try again.');
+        }
+        return;
+      }
+
+      // Product barcode: find the tier it belongs to across the live catalogue.
+      const needle = event.value.trim().toLowerCase();
+      for (const entry of catalogue.data ?? []) {
+        const variant = entry.variants.find(
+          (candidate) => candidate.barcode?.toLowerCase() === needle,
+        );
+        if (variant) {
+          addStandardTier(entry, variant);
+          return;
+        }
+      }
+
+      setError(`Barcode ${event.value} is not on any active tier.`);
+    },
+    [catalogue.data, addStandardTier],
+  );
+
+  useHardwareScanner({
+    onScan: (event) => void handleScan(event),
+    // The scale keypad and the walk-in form own the keyboard while open.
+    enabled: scaleTarget === null && !walkInOpen && receipt === null,
+  });
 
   return (
     <main className="min-h-screen bg-void pb-24 pt-6">
@@ -763,7 +822,30 @@ export default function PosTerminalPage() {
       ) : null}
 
       {/* 80mm Thermal Receipt Modal */}
-      {receipt ? <ThermalReceiptModal receipt={receipt} onClose={() => setReceipt(null)} /> : null}
+      {receipt ? (
+        <ThermalReceiptModal
+          receipt={receipt}
+          member={selectedMember}
+          branchName="Sandton Vault Lounge"
+          terminalLabel="TERMINAL 01"
+          cashierName={null}
+          tender={[
+            {
+              method: tenderMethod,
+              // What was actually captured; an unsettled balance prints as
+              // BALANCE DUE off the receipt's own outstanding figure.
+              amountCents:
+                receipt.captured_cents > 0 ? receipt.captured_cents : receipt.total_cents,
+              tenderedCents: tenderMethod === 'CASH' ? tenderedCents : null,
+              changeCents:
+                tenderMethod === 'CASH'
+                  ? Math.max(0, tenderedCents - receipt.total_cents)
+                  : null,
+            },
+          ]}
+          onClose={() => setReceipt(null)}
+        />
+      ) : null}
     </main>
   );
 }
@@ -1027,73 +1109,57 @@ function WalkInModal({
 // 80mm Thermal Receipt Modal
 // ---------------------------------------------------------------------------
 
+/**
+ * Receipt overlay.
+ *
+ * The slip itself is `ThermalReceiptPrint`, which renders `#thermal-receipt` —
+ * the id the `@media print` block in globals.css scopes printing to. Everything
+ * else on the page is hidden at print time, so the printer receives the 72mm
+ * slip and nothing else.
+ */
 function ThermalReceiptModal({
   receipt,
+  member,
+  branchName,
+  terminalLabel,
+  cashierName,
+  tender,
   onClose,
 }: {
   receipt: ProcessOrderResult;
+  member: MemberRow | null;
+  branchName: string;
+  terminalLabel: string;
+  cashierName: string | null;
+  tender: readonly ThermalReceiptTender[];
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/85 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/85 p-4 backdrop-blur-sm print:bg-transparent print:p-0 print:backdrop-blur-none">
       <div className="flex flex-col items-center gap-4">
-        <div className="receipt-80mm w-80 border border-gold bg-white p-5 font-mono text-xs text-black shadow-obsidian">
-          <div className="text-center">
-            <p className="text-sm font-bold tracking-[0.3em]">420 CARTEL</p>
-            <p className="text-[10px] tracking-[0.2em]">SANDTON VAULT & LOUNGE</p>
-            <p className="mt-1 text-[10px]">DOCKET #{receipt.order_number}</p>
-          </div>
-
-          <div className="my-3 border-t border-dashed border-black" />
-
-          <div className="space-y-2">
-            {receipt.items.map((item, index) => (
-              <div key={`${item.product_name}-${index}`}>
-                <div className="flex justify-between font-bold">
-                  <span>
-                    {item.quantity}x {item.product_name}
-                  </span>
-                  <span>{formatCents(item.line_total_cents)}</span>
-                </div>
-                <div className="text-[10px] text-neutral-700">
-                  {item.variant_label} ({formatBaseQty(item.base_qty, item.base_uom)}) · Batch:{' '}
-                  {item.batch_allocation.map((b) => b.batch_code).join(',')}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="my-3 border-t border-dashed border-black" />
-
-          <div className="space-y-1 text-[11px]">
-            <div className="flex justify-between">
-              <span>SUBTOTAL</span>
-              <span>{formatCents(receipt.subtotal_cents)}</span>
-            </div>
-            {receipt.discount_cents > 0 ? (
-              <div className="flex justify-between">
-                <span>DISCOUNT</span>
-                <span>-{formatCents(receipt.discount_cents)}</span>
-              </div>
-            ) : null}
-            <div className="flex justify-between">
-              <span>15% VAT INCL.</span>
-              <span>{formatCents(vatPortionCents(receipt.total_cents))}</span>
-            </div>
-            <div className="flex justify-between border-t border-black pt-1 text-sm font-bold">
-              <span>TOTAL ZAR</span>
-              <span>{formatCents(receipt.total_cents)}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col items-center gap-1">
-            <QrCode value={receipt.order_number} size={112} />
-            <span className="text-[9px] tracking-[0.2em]">ADULTS 18+ PERSONAL ALLOCATION</span>
-          </div>
+        <div className="border border-gold shadow-obsidian print:border-0 print:shadow-none">
+          <ThermalReceiptPrint
+            receipt={receipt}
+            branchName={branchName}
+            terminalLabel={terminalLabel}
+            cashierName={cashierName}
+            tender={tender}
+            member={
+              member
+                ? {
+                    memberCode: member.member_code,
+                    fullName: `${member.first_name} ${member.last_name}`,
+                    rankLabel: RANK_LABEL[member.rank] ?? member.rank,
+                    pointsBalance: member.points_balance,
+                    creditBalanceCents: member.credit_balance_cents,
+                  }
+                : null
+            }
+          />
         </div>
 
         <div className="flex gap-2 print:hidden">
-          <Button variant="gold" onClick={() => window.print()}>
+          <Button variant="gold" onClick={() => printThermalReceipt()}>
             <Printer className="size-4" />
             Print 80mm Receipt
           </Button>

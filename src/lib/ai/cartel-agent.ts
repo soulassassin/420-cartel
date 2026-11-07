@@ -257,3 +257,4 @@ Your role and constraints:
 });
 
 export type CartelAgentUIMessage = InferAgentUIMessage<typeof cartelSommelierAgent>;
+

@@ -40,7 +40,9 @@ import {
   useCartStore,
 } from '@/lib/store/cart';
 import { isVerifiedMember, useSessionStore } from '@/lib/store/session';
+import { useStockBoardSync, type StockSnapshot } from '@/hooks/useStockBoardSync';
 import { LEGAL_AGE } from '@/lib/sa-id';
+import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import type { BaseUom, ProductCategory, ProductVariantRow } from '@/types/database';
 
@@ -81,6 +83,16 @@ export default function ShopPage() {
   }, [setBranch]);
 
   const catalogue = useCartelQuery(() => listCatalogue(branchId), [branchId]);
+
+  /**
+   * Live stock for this branch.
+   *
+   * Subscribes to `product_stock_board` and trims cart lines when a POS sale
+   * takes the stock out from under this tab. One socket serves every card on
+   * the page; `process_cartel_order` still re-checks under row locks, so this
+   * is about telling the shopper early, never about trusting the browser.
+   */
+  const stockSync = useStockBoardSync({ branchId });
 
   // Keep the cached member row fresh — balances and rank move with every order.
   const memberId = member?.id ?? null;
@@ -217,6 +229,8 @@ export default function ShopPage() {
                   <ProductCard
                     key={entry.product.id}
                     entry={entry}
+                    live={stockSync.snapshotFor(entry.product.id)}
+                    liveWarning={stockSync.warnings[entry.product.id] ?? null}
                     onNotice={setNotice}
                     onAdded={() => setCartOpen(true)}
                   />
@@ -291,14 +305,33 @@ export default function ShopPage() {
 
 function ProductCard({
   entry,
+  live,
+  liveWarning,
   onNotice,
   onAdded,
 }: {
   entry: CatalogueEntry;
+  /** Realtime snapshot from product_stock_board, when the feed is up. */
+  live: StockSnapshot | null;
+  liveWarning: string | null;
   onNotice: (message: string | null) => void;
   onAdded: () => void;
 }) {
   const { product, variants, batches, stock } = entry;
+
+  /**
+   * Stock source of truth for this card.
+   *
+   * `entry.stock` comes from `product_stock_levels`, which sits behind staff
+   * RLS and so reads as zero for a member. The realtime board is the
+   * member-safe projection, so it wins whenever the feed has a row — and a POS
+   * sale of the last eighth lands here within a tick.
+   */
+  const availableBaseQty = live ? live.availableBaseQty : stock.available_base_qty;
+  const remainingBaseQty = live
+    ? Math.max(live.availableBaseQty, stock.remaining_base_qty)
+    : stock.remaining_base_qty;
+  const isLowStockLive = live ? live.isLowStock : stock.is_low_stock;
   const member = useSessionStore((state) => state.member);
   const addLine = useCartStore((state) => state.addLine);
   const lines = useCartStore((state) => state.lines);
@@ -309,7 +342,7 @@ function ProductCard({
 
   const leadBatch = batches.find((batch) => batch.remaining_base_qty > 0) ?? batches[0] ?? null;
   const committed = cartProductBaseQty(lines, product.id);
-  const headroom = roundBaseQty(stock.available_base_qty - committed, product.base_uom);
+  const headroom = roundBaseQty(availableBaseQty - committed, product.base_uom);
 
   const add = useCallback(
     (variant: ProductVariantRow) => {
@@ -339,8 +372,8 @@ function ProductCard({
     [addLine, headroom, member, onAdded, onNotice, product],
   );
 
-  const gaugePct = stock.remaining_base_qty > 0
-    ? Math.min(100, Math.max(2, (stock.available_base_qty / Math.max(stock.remaining_base_qty, 1)) * 100))
+  const gaugePct = remainingBaseQty > 0
+    ? Math.min(100, Math.max(2, (availableBaseQty / Math.max(remainingBaseQty, 1)) * 100))
     : 0;
 
   return (
@@ -371,10 +404,10 @@ function ProductCard({
 
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           {leadBatch ? <Badge tone="gold">{leadBatch.batch_code}</Badge> : null}
-          {stock.is_low_stock && stock.available_base_qty > 0 ? (
+          {isLowStockLive && availableBaseQty > 0 ? (
             <Badge tone="warn">Low Stock</Badge>
           ) : null}
-          {stock.available_base_qty <= 0 ? <Badge tone="danger">Depleted</Badge> : null}
+          {availableBaseQty <= 0 ? <Badge tone="danger">Depleted</Badge> : null}
         </div>
 
         {product.is_featured ? (
@@ -431,7 +464,7 @@ function ProductCard({
               Vault Balance
             </span>
             <span className="font-mono text-[0.75rem] tabular-nums text-gold">
-              {stock.available_base_qty.toFixed(UOM_PRECISION[product.base_uom])}{' '}
+              {availableBaseQty.toFixed(UOM_PRECISION[product.base_uom])}{' '}
               {UOM_SYMBOL[product.base_uom]} remaining
             </span>
           </div>
@@ -444,6 +477,13 @@ function ProductCard({
           {committed > 0 ? (
             <span className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-muted-foreground">
               {formatBaseQty(committed, product.base_uom)} already in your crate
+            </span>
+          ) : null}
+
+          {/* A POS sale moved this batch while the tab was open. */}
+          {liveWarning ? (
+            <span className="mt-1 border border-amber-500/50 bg-amber-500/10 px-2 py-1 font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-amber-300">
+              {liveWarning}
             </span>
           ) : null}
         </div>
@@ -514,7 +554,7 @@ function ProductCard({
         {selected && product.base_uom !== 'UNITS' ? (
           <p className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-faint">
             Deducts {formatBaseQty(selected.base_quantity, product.base_uom)} ·{' '}
-            {tiersAvailable(stock.available_base_qty, selected.base_quantity)} available
+            {tiersAvailable(availableBaseQty, selected.base_quantity)} available
           </p>
         ) : null}
       </div>
@@ -560,7 +600,7 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const removeLine = useCartStore((state) => state.removeLine);
   const clear = useCartStore((state) => state.clear);
   const subtotal = useCartStore(selectCartSubtotalCents);
-  const uomTotals = useCartStore(selectCartUomTotals);
+  const uomTotals = useCartStore(useShallow(selectCartUomTotals));
 
   useEffect(() => {
     if (!open) return;

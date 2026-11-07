@@ -8,6 +8,10 @@
    ===================================================================== */
 @layer base {
   :root {
+    --font-display: 'Archivo', system-ui, sans-serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
     --bg-void: #050505;
     --bg-surface: #0d0d0d;
     --bg-elevated: #131313;

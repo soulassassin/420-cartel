@@ -740,7 +740,13 @@ function SceneCameraAndLighting() {
         color={CARTEL_COLORS.goldDeep}
       />
 
-      <Environment preset="city" background={false} environmentIntensity={0.42} />
+      {/* Isolated in its own boundary on purpose: the preset streams an HDRI
+          from a CDN, and inside the scene's Suspense a slow or blocked fetch
+          would hold back the entire vault. Here it simply arrives late, and
+          the spotlights above carry the scene until it does. */}
+      <Suspense fallback={null}>
+        <Environment preset="city" background={false} environmentIntensity={0.42} />
+      </Suspense>
       <AdaptiveDpr pixelated />
       <AdaptiveEvents />
       <Preload all />

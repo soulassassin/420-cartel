@@ -48,6 +48,9 @@ export default function AdminLoyaltyPage() {
     CAPO: '20000',
     CONSIGLIERE: '60000',
   });
+  // Affiliate-side parameters, added by migration 0005.
+  const [defaultCommissionBps, setDefaultCommissionBps] = useState('500');
+  const [referralWindowDays, setReferralWindowDays] = useState('30');
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,8 @@ export default function AdminLoyaltyPage() {
       CAPO: String(Math.round((r.rank_thresholds.CAPO ?? 2_000_000) / 100)),
       CONSIGLIERE: String(Math.round((r.rank_thresholds.CONSIGLIERE ?? 6_000_000) / 100)),
     });
+    setDefaultCommissionBps(String(r.default_commission_bps ?? 500));
+    setReferralWindowDays(String(r.referral_window_days ?? 30));
   }, [rulesQuery.data]);
 
   const handleSaveRules = useCallback(async () => {
@@ -80,6 +85,16 @@ export default function AdminLoyaltyPage() {
           CAPO: Math.max(0, (Number.parseInt(thresholds.CAPO, 10) || 20000) * 100),
           CONSIGLIERE: Math.max(0, (Number.parseInt(thresholds.CONSIGLIERE, 10) || 60000) * 100),
         },
+        // Clamped to the CHECK constraints in migration 0005, so a slip in the
+        // form surfaces as a corrected value rather than a Postgres error.
+        default_commission_bps: Math.min(
+          10_000,
+          Math.max(0, Number.parseInt(defaultCommissionBps, 10) || 0),
+        ),
+        referral_window_days: Math.min(
+          365,
+          Math.max(1, Number.parseInt(referralWindowDays, 10) || 30),
+        ),
       });
       setNotice('Loyalty engine rules saved and member ranks re-evaluated.');
       rulesQuery.refresh();
@@ -88,7 +103,15 @@ export default function AdminLoyaltyPage() {
     } finally {
       setSaving(false);
     }
-  }, [pointsPer100Cents, pointValueCents, minRedeemPoints, thresholds, rulesQuery]);
+  }, [
+    pointsPer100Cents,
+    pointValueCents,
+    minRedeemPoints,
+    thresholds,
+    defaultCommissionBps,
+    referralWindowDays,
+    rulesQuery,
+  ]);
 
   const handleUpdateBps = useCallback(
     async (codeId: string, bps: number) => {
@@ -160,6 +183,23 @@ export default function AdminLoyaltyPage() {
               <Trophy className="size-5 text-gold" />
             </div>
 
+            {/*
+              Module 7 ships the mechanism with the numbers deliberately
+              provisional: every figure on this panel is a parameter, not a
+              hard-coded rule, and `process_cartel_order` reads the saved row
+              rather than any constant in the app.
+            */}
+            <div className="border border-gold/50 bg-gold/[0.07] px-4 py-3">
+              <p className="font-mono text-[0.5625rem] uppercase tracking-[0.24em] text-gold">
+                Rule Parameters Ready for Final Calibration
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Accrual, point value, rank thresholds, commission and the referral
+                window are all tunable here. Saving re-evaluates member ranks and
+                takes effect on the next order — no deploy, no migration.
+              </p>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Pts per R1.00" htmlFor="lr_pts">
                 <Input
@@ -185,6 +225,28 @@ export default function AdminLoyaltyPage() {
                   type="number"
                   value={minRedeemPoints}
                   onChange={(e) => setMinRedeemPoints(e.target.value)}
+                  className="font-mono"
+                />
+              </Field>
+              <Field
+                label="Default Commission"
+                htmlFor="lr_bps"
+                hint={`${(Number.parseInt(defaultCommissionBps, 10) || 0) / 100}%`}
+              >
+                <Input
+                  id="lr_bps"
+                  type="number"
+                  value={defaultCommissionBps}
+                  onChange={(e) => setDefaultCommissionBps(e.target.value)}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Referral Window (days)" htmlFor="lr_window">
+                <Input
+                  id="lr_window"
+                  type="number"
+                  value={referralWindowDays}
+                  onChange={(e) => setReferralWindowDays(e.target.value)}
                   className="font-mono"
                 />
               </Field>

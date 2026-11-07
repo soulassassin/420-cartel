@@ -202,29 +202,82 @@ export default function AdminInventoryPage() {
     setGeneratingReel(true);
     setError(null);
     try {
-      const job = await createMediaJob({
-        productId: selectedStudioEntry.product.id,
-        prompt: composedPrompt,
-        kind: 'PROMO_REEL',
-        params: {
-          ...REEL_PARAMS.PROMO_REEL,
-          camera: cameraPreset,
-          lighting: lightingPreset,
-        },
-      });
-
       if (IS_LOCAL_PREVIEW) {
-        // Complete with a preview synthesis record so the operator sees the full lifecycle
+        // No credentials: run the lifecycle through the in-browser engine so
+        // the operator still sees queue -> complete.
+        const job = await createMediaJob({
+          productId: selectedStudioEntry.product.id,
+          prompt: composedPrompt,
+          kind: 'PROMO_REEL',
+          params: {
+            ...REEL_PARAMS.PROMO_REEL,
+            camera: cameraPreset,
+            lighting: lightingPreset,
+          },
+        });
+
         await updateMediaJob(job.id, {
           status: 'COMPLETED',
           duration_seconds: 5,
           completed_at: new Date().toISOString(),
         });
+
+        setNotice(
+          `Preview reel synthesised for ${selectedStudioEntry.product.name} (${CAMERA_PRESET_LABEL[cameraPreset]}).`,
+        );
+      } else {
+        /**
+         * Live dispatch is server-side only: the Higgsfield MCP key must never
+         * reach the browser. The route composes the brand prompt from the
+         * BATCH (lab THC/CBD and measured terpenes beat the product's nominal
+         * figures), records the job, and writes the finished .mp4 back onto
+         * `master_batches.higgsfield_promo_video_url` — which the storefront
+         * card then plays as its hover preview via `product_stock_board`.
+         */
+        const batch =
+          [...selectedStudioEntry.batches]
+            .filter((candidate) => candidate.is_active && candidate.remaining_base_qty > 0)
+            .sort((a, b) => a.received_at.localeCompare(b.received_at))[0] ??
+          selectedStudioEntry.batches[0];
+
+        if (!batch) {
+          throw new Error(
+            `Receive a batch of ${selectedStudioEntry.product.name} before generating its reel — reels are shot per batch.`,
+          );
+        }
+
+        const response = await fetch('/api/higgsfield/generate-reel', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            batchId: batch.id,
+            extraDirection: [
+              `Camera preset: ${CAMERA_PRESET_LABEL[cameraPreset]}.`,
+              `Lighting preset: ${LIGHTING_PRESET_LABEL[lightingPreset]}.`,
+              directorNote.trim() ? `Director note: ${directorNote.trim()}` : '',
+            ]
+              .filter(Boolean)
+              .join(' '),
+          }),
+        });
+
+        const payload = (await response.json()) as {
+          error?: string;
+          batchCode?: string;
+          jobId?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? 'Higgsfield declined the request.');
+        }
+
+        setNotice(
+          `Queued a reel for ${selectedStudioEntry.product.name} · batch #${
+            payload.batchCode ?? batch.batch_code
+          }. It lands on the batch and the storefront card once rendered.`,
+        );
       }
 
-      setNotice(
-        `Dispatched Higgsfield reel job for ${selectedStudioEntry.product.name} (${CAMERA_PRESET_LABEL[cameraPreset]}).`,
-      );
       mediaJobs.refresh();
       catalogue.refresh();
     } catch (caught) {
@@ -232,7 +285,15 @@ export default function AdminInventoryPage() {
     } finally {
       setGeneratingReel(false);
     }
-  }, [selectedStudioEntry, composedPrompt, cameraPreset, lightingPreset, mediaJobs, catalogue]);
+  }, [
+    selectedStudioEntry,
+    composedPrompt,
+    cameraPreset,
+    lightingPreset,
+    directorNote,
+    mediaJobs,
+    catalogue,
+  ]);
 
   return (
     <main className="min-h-screen bg-void pb-28 pt-12">
