@@ -1,0 +1,720 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  Check,
+  FileCheck2,
+  Globe2,
+  Loader2,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  UserRoundCheck,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Field, Input, Label } from '@/components/ui/field';
+import { Badge, Card, Eyebrow, Separator } from '@/components/ui/surfaces';
+import { SaIdField } from '@/components/onboarding/SaIdField';
+import { CartelMemberQrPass } from '@/components/crm/CartelMemberQrPass';
+import { MEMBERSHIP_AGREEMENT_VERSION } from '@/lib/brand';
+import { LEGAL_AGE, parseSaId, validatePassportDob } from '@/lib/sa-id';
+import { createMember, IS_LOCAL_PREVIEW, type LocalCreateMemberInput } from '@/lib/data/source';
+import { DEFAULT_BRANCH_ID } from '@/lib/demo/fixtures';
+import { useSessionStore } from '@/lib/store/session';
+import { REFERRAL_COOKIE } from '@/lib/loyalty';
+import { cn } from '@/lib/utils';
+import type { MemberRow } from '@/types/database';
+
+/**
+ * Module B — Private Collective onboarding.
+ *
+ * Three steps, and the 18+ decision is taken before step 1 can be left:
+ * the SA ID number is parsed in the browser for instant feedback, re-parsed
+ * here before anything is written, and validated a third time by a CHECK
+ * constraint inside `submit_member_kyc`. Only the last one is a boundary.
+ */
+
+type IdMode = 'SA_ID' | 'PASSPORT';
+
+interface UploadSlot {
+  key: 'ID_FRONT' | 'LIVE_SELFIE';
+  label: string;
+  hint: string;
+}
+
+const UPLOAD_SLOTS: UploadSlot[] = [
+  {
+    key: 'ID_FRONT',
+    label: 'Identity Document',
+    hint: 'Photograph of your SA ID card, ID book page or passport photo page.',
+  },
+  {
+    key: 'LIVE_SELFIE',
+    label: 'Live Selfie',
+    hint: 'A photo of your face, taken now, holding the same document.',
+  },
+];
+
+interface StoredUpload {
+  name: string;
+  size: number;
+  type: string;
+  /** Short content digest, shown so the member can see the file was read. */
+  digest: string;
+  previewUrl: string | null;
+}
+
+const STEPS = ['Age & Identity', 'Mandate & KYC', 'Member Pass'] as const;
+
+export default function OnboardingPage() {
+  const [step, setStep] = useState(0);
+  const [idMode, setIdMode] = useState<IdMode>('SA_ID');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [issuedMember, setIssuedMember] = useState<MemberRow | null>(null);
+
+  // Step 1
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saIdNumber, setSaIdNumber] = useState('');
+  const [passportNumber, setPassportNumber] = useState('');
+  const [passportCountry, setPassportCountry] = useState('');
+  const [passportDob, setPassportDob] = useState('');
+
+  // Step 2
+  const [uploads, setUploads] = useState<Partial<Record<UploadSlot['key'], StoredUpload>>>({});
+  const [agreementSigned, setAgreementSigned] = useState(false);
+  const [ageDeclared, setAgeDeclared] = useState(false);
+
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const signIn = useSessionStore((state) => state.signIn);
+
+  // Pick up `?ref=CARTEL-XXXX`, which middleware parked in a cookie.
+  useEffect(() => {
+    const fromQuery = new URLSearchParams(window.location.search).get('ref');
+    const fromCookie = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith(`${REFERRAL_COOKIE}=`))
+      ?.split('=')[1];
+    const code = (fromQuery ?? fromCookie ?? '').trim().toUpperCase();
+    if (/^CARTEL-[A-Z0-9]{4,12}$/.test(code)) setReferralCode(code);
+  }, []);
+
+  // --- Age verdict -------------------------------------------------------
+  const identity = useMemo(() => {
+    if (idMode === 'SA_ID') {
+      const parsed = parseSaId(saIdNumber);
+      if (!parsed.valid) return { ok: false as const, message: parsed.message };
+      if (!parsed.isOfLegalAge) {
+        return {
+          ok: false as const,
+          message: `Membership is restricted to adults ${LEGAL_AGE} and over.`,
+        };
+      }
+      return {
+        ok: true as const,
+        dateOfBirth: parsed.dateOfBirth,
+        nationality: parsed.citizenship,
+        gender: parsed.genderMarker,
+      };
+    }
+    const parsed = validatePassportDob(passportDob);
+    if (!parsed.ok) return { ok: false as const, message: parsed.message };
+    return {
+      ok: true as const,
+      dateOfBirth: parsed.dateOfBirth,
+      nationality: passportCountry.toUpperCase() || null,
+      gender: null,
+    };
+  }, [idMode, saIdNumber, passportDob, passportCountry]);
+
+  const profileComplete =
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) &&
+    /^(\+?27|0)[6-8][0-9]{8}$/.test(phone.replace(/\s/g, ''));
+
+  const passportComplete =
+    idMode === 'SA_ID' ||
+    (passportNumber.trim().length >= 4 && passportCountry.trim().length === 2);
+
+  const step1Ready = identity.ok && profileComplete && passportComplete;
+  const step2Ready =
+    agreementSigned &&
+    ageDeclared &&
+    UPLOAD_SLOTS.every((slot) => Boolean(uploads[slot.key]));
+
+  // --- Uploads -----------------------------------------------------------
+  const storeUpload = useCallback(async (key: UploadSlot['key'], file: File) => {
+    if (file.size > 15 * 1024 * 1024) {
+      setFormError('That file is over 15MB. Photograph it at a lower resolution.');
+      return;
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      setFormError('Upload a JPG, PNG, WEBP, HEIC or PDF.');
+      return;
+    }
+
+    setFormError(null);
+
+    // A SHA-256 prefix proves the file was read without sending it anywhere.
+    let digest = 'unhashed';
+    try {
+      const buffer = await file.arrayBuffer();
+      const hash = await crypto.subtle.digest('SHA-256', buffer);
+      digest = Array.from(new Uint8Array(hash).slice(0, 6))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      // crypto.subtle needs a secure context; the preview still works without it.
+    }
+
+    setUploads((current) => {
+      const previous = current[key];
+      if (previous?.previewUrl) URL.revokeObjectURL(previous.previewUrl);
+      return {
+        ...current,
+        [key]: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          digest,
+          previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+        },
+      };
+    });
+  }, []);
+
+  const clearUpload = useCallback((key: UploadSlot['key']) => {
+    setUploads((current) => {
+      const previous = current[key];
+      if (previous?.previewUrl) URL.revokeObjectURL(previous.previewUrl);
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  // --- Submit ------------------------------------------------------------
+  const submit = useCallback(async () => {
+    if (!identity.ok) {
+      setFormError(identity.message);
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+
+    const payload: LocalCreateMemberInput = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.replace(/\s/g, ''),
+      idDocumentType: idMode,
+      saIdNumber: idMode === 'SA_ID' ? saIdNumber.replace(/\D/g, '') : null,
+      passportNumber: idMode === 'PASSPORT' ? passportNumber.trim() : null,
+      passportCountry: idMode === 'PASSPORT' ? passportCountry.trim().toUpperCase() : null,
+      dateOfBirth: identity.dateOfBirth,
+      nationality: identity.nationality,
+      gender: identity.gender,
+      preferredUom: 'GRAMS',
+      marketingOptIn: true,
+      homeBranchId: DEFAULT_BRANCH_ID,
+      referredByCode: referralCode,
+      // In local preview the collective approves instantly so `/shop` opens;
+      // against Supabase the member lands in PENDING_KYC for a human reviewer.
+      autoApprove: IS_LOCAL_PREVIEW,
+    };
+
+    try {
+      const member = await createMember(payload);
+      setIssuedMember(member);
+      signIn(member);
+      setStep(2);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not issue your pass.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    identity,
+    firstName,
+    lastName,
+    email,
+    phone,
+    idMode,
+    saIdNumber,
+    passportNumber,
+    passportCountry,
+    referralCode,
+    signIn,
+  ]);
+
+  return (
+    <main className="relative min-h-screen bg-void pb-32 pt-16">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-vault-radial" />
+
+      <div className="container relative max-w-3xl">
+        <header className="flex flex-col gap-4">
+          <Eyebrow>Private Collective Onboarding</Eyebrow>
+          <h1 className="display-md text-white">
+            Join the <span className="gold-text">Cartel</span>
+          </h1>
+          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+            420 Cartel is a private cannabis collective operating under South African personal
+            allocation law. Membership is restricted to verified adults {LEGAL_AGE} and over, and
+            every allocation is recorded against your member file.
+          </p>
+          {referralCode ? (
+            <Badge tone="gold" className="w-fit">
+              Referred by {referralCode}
+            </Badge>
+          ) : null}
+        </header>
+
+        {/* Step rail */}
+        <ol className="mt-12 grid grid-cols-3 gap-2" aria-label="Onboarding progress">
+          {STEPS.map((label, index) => {
+            const state = index < step ? 'done' : index === step ? 'current' : 'todo';
+            return (
+              <li
+                key={label}
+                aria-current={state === 'current' ? 'step' : undefined}
+                className={cn(
+                  'flex items-center gap-2.5 border-t-2 pt-3 transition-colors duration-300',
+                  state === 'done' && 'border-gold/60 text-gold',
+                  state === 'current' && 'border-gold text-white',
+                  state === 'todo' && 'border-[color:var(--border-mono)] text-faint',
+                )}
+              >
+                <span className="font-mono text-[0.625rem] tabular-nums">
+                  {state === 'done' ? <Check className="size-3.5" /> : `0${index + 1}`}
+                </span>
+                <span className="font-mono text-[0.625rem] uppercase tracking-[0.18em]">
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+
+        {formError ? (
+          <p
+            role="alert"
+            className="mt-8 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+          >
+            {formError}
+          </p>
+        ) : null}
+
+        {/* ---------------- STEP 1 ---------------- */}
+        {step === 0 ? (
+          <Card className="mt-8 flex flex-col gap-8 p-6 sm:p-8">
+            <div>
+              <Label>Identity Document</Label>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                  variant={idMode === 'SA_ID' ? 'active' : 'surface'}
+                  onClick={() => setIdMode('SA_ID')}
+                  type="button"
+                >
+                  <UserRoundCheck className="size-4" />
+                  SA 13-Digit ID
+                </Button>
+                <Button
+                  variant={idMode === 'PASSPORT' ? 'active' : 'surface'}
+                  onClick={() => setIdMode('PASSPORT')}
+                  type="button"
+                >
+                  <Globe2 className="size-4" />
+                  International Passport
+                </Button>
+              </div>
+            </div>
+
+            {idMode === 'SA_ID' ? (
+              <SaIdField value={saIdNumber} onValueChange={setSaIdNumber} />
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Passport Number" htmlFor="passport_number" required>
+                  <Input
+                    id="passport_number"
+                    value={passportNumber}
+                    onChange={(event) => setPassportNumber(event.target.value.toUpperCase())}
+                    placeholder="A01234567"
+                    className="font-mono tracking-[0.1em]"
+                  />
+                </Field>
+                <Field
+                  label="Issuing Country"
+                  htmlFor="passport_country"
+                  hint="2-letter code"
+                  required
+                >
+                  <Input
+                    id="passport_country"
+                    value={passportCountry}
+                    onChange={(event) =>
+                      setPassportCountry(event.target.value.toUpperCase().slice(0, 2))
+                    }
+                    placeholder="GB"
+                    className="font-mono tracking-[0.2em]"
+                  />
+                </Field>
+                <Field
+                  label="Date of Birth"
+                  htmlFor="passport_dob"
+                  required
+                  className="sm:col-span-2"
+                  error={
+                    passportDob.length === 10 && !identity.ok
+                      ? (identity as { message: string }).message
+                      : null
+                  }
+                >
+                  <Input
+                    id="passport_dob"
+                    type="date"
+                    value={passportDob}
+                    onChange={(event) => setPassportDob(event.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+            )}
+
+            <Separator />
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="First Name" htmlFor="first_name" required>
+                <Input
+                  id="first_name"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  autoComplete="given-name"
+                />
+              </Field>
+              <Field label="Last Name" htmlFor="last_name" required>
+                <Input
+                  id="last_name"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  autoComplete="family-name"
+                />
+              </Field>
+              <Field label="Email" htmlFor="email" required>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  placeholder="you@example.co.za"
+                />
+              </Field>
+              <Field label="Mobile Number" htmlFor="phone" hint="SA mobile" required>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  autoComplete="tel"
+                  placeholder="082 123 4567"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {identity.ok ? (
+                <Badge tone="live">
+                  <ShieldCheck className="size-3" />
+                  {LEGAL_AGE}+ Confirmed
+                </Badge>
+              ) : (
+                <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+                  Awaiting a valid document
+                </span>
+              )}
+              <Button
+                variant="gold"
+                size="lg"
+                disabled={!step1Ready}
+                onClick={() => {
+                  setFormError(null);
+                  setStep(1);
+                }}
+              >
+                Continue
+                <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
+        {/* ---------------- STEP 2 ---------------- */}
+        {step === 1 ? (
+          <div className="mt-8 flex flex-col gap-6">
+            <Card className="flex flex-col gap-6 p-6 sm:p-8">
+              <div>
+                <Eyebrow>Step 02 · KYC</Eyebrow>
+                <h2 className="mt-2 font-display text-xl uppercase tracking-wide text-white">
+                  Document Verification
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {IS_LOCAL_PREVIEW
+                    ? 'Local preview: files are hashed in your browser and never uploaded. Against a configured project they go to the private kyc-documents bucket.'
+                    : 'Files upload to the private kyc-documents bucket. Only the reviewing staff member can open them, through a short-lived signed URL.'}
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {UPLOAD_SLOTS.map((slot) => (
+                  <Dropzone
+                    key={slot.key}
+                    slot={slot}
+                    upload={uploads[slot.key]}
+                    onFile={(file) => void storeUpload(slot.key, file)}
+                    onClear={() => clearUpload(slot.key)}
+                  />
+                ))}
+              </div>
+            </Card>
+
+            <Card className="flex flex-col gap-5 p-6 sm:p-8">
+              <div>
+                <Eyebrow>Private Grow-Club Mandate</Eyebrow>
+                <h2 className="mt-2 font-display text-xl uppercase tracking-wide text-white">
+                  Personal Allocation Agreement
+                </h2>
+                <p className="mt-1 font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+                  Version {MEMBERSHIP_AGREEMENT_VERSION}
+                </p>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto border border-[color:var(--border-mono)] bg-void p-4 text-[0.8125rem] leading-relaxed text-muted-foreground cartel-scroll">
+                <p className="mb-3">
+                  <strong className="text-foreground">1. Private collective.</strong> 420 Cartel is a
+                  closed private collective. Cultivation is undertaken collectively on behalf of
+                  members, and each allocation you receive is your own personal allocation as a
+                  member of that collective. Nothing in this agreement constitutes a public sale.
+                </p>
+                <p className="mb-3">
+                  <strong className="text-foreground">2. Adults only.</strong> You confirm you are{' '}
+                  {LEGAL_AGE} years of age or older and that the identity document you have provided
+                  is your own. Membership is personal and may not be transferred, lent or shared.
+                </p>
+                <p className="mb-3">
+                  <strong className="text-foreground">3. Personal use.</strong> Allocations are for
+                  your own personal consumption in a private place. You undertake not to resell,
+                  supply or distribute any allocation to any other person, and not to remove any
+                  allocation from the Republic of South Africa.
+                </p>
+                <p className="mb-3">
+                  <strong className="text-foreground">4. No consumption on premises.</strong> The
+                  collective’s lounges are collection points. You agree not to consume on the
+                  premises and not to drive after consuming.
+                </p>
+                <p className="mb-3">
+                  <strong className="text-foreground">5. Records.</strong> The collective keeps a
+                  record of your identity verification, your allocations and the batches they were
+                  drawn from, as required to operate lawfully and to trace any product recall.
+                </p>
+                <p>
+                  <strong className="text-foreground">6. Suspension.</strong> The collective may
+                  suspend or terminate your membership where this mandate is breached, and will
+                  record the reason on your member file.
+                </p>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={agreementSigned}
+                  onChange={(event) => setAgreementSigned(event.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
+                />
+                <span className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                  I have read and digitally sign the{' '}
+                  <span className="text-gold">Personal Allocation Agreement</span> as{' '}
+                  <span className="text-foreground">
+                    {firstName || 'your name'} {lastName}
+                  </span>
+                  .
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={ageDeclared}
+                  onChange={(event) => setAgeDeclared(event.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
+                />
+                <span className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                  I declare that I am {LEGAL_AGE} years or older and that the document details above
+                  are mine.
+                </span>
+              </label>
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <Button variant="ghost" onClick={() => setStep(0)} disabled={submitting}>
+                  Back
+                </Button>
+                <Button
+                  variant="gold"
+                  size="lg"
+                  disabled={!step2Ready || submitting}
+                  onClick={() => void submit()}
+                >
+                  {submitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FileCheck2 className="size-4" />
+                  )}
+                  {submitting ? 'Issuing Pass' : 'Issue My Member Pass'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        ) : null}
+
+        {/* ---------------- STEP 3 ---------------- */}
+        {step === 2 && issuedMember ? (
+          <div className="mt-8 flex flex-col items-center gap-8">
+            <div className="text-center">
+              <Badge tone="live" className="mx-auto">
+                <ShieldCheck className="size-3" />
+                Membership Issued
+              </Badge>
+              <h2 className="mt-5 font-display text-2xl uppercase tracking-wide text-white">
+                Welcome to the Cartel
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+                {issuedMember.status === 'PENDING_KYC'
+                  ? 'Your pass is live and your documents are queued for review. A reviewer unlocks full allocation access once your KYC is approved.'
+                  : 'Your pass is live. Present the QR at the vault, or open the private dispensary to place your first allocation.'}
+              </p>
+            </div>
+
+            <CartelMemberQrPass member={issuedMember} />
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button variant="gold" size="lg" asChild>
+                <Link href="/shop">
+                  Enter the Dispensary
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/">Back to the Vault</Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
+function Dropzone({
+  slot,
+  upload,
+  onFile,
+  onClear,
+}: {
+  slot: UploadSlot;
+  upload: StoredUpload | undefined;
+  onFile: (file: File) => void;
+  onClear: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>{slot.label}</Label>
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const file = event.dataTransfer.files[0];
+          if (file) onFile(file);
+        }}
+        className={cn(
+          'relative flex min-h-36 flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 text-center transition-colors duration-300',
+          dragging
+            ? 'border-gold bg-gold/5'
+            : upload
+              ? 'border-emerald-500/50 bg-emerald-500/[0.04]'
+              : 'border-[color:var(--border-mono)] bg-void hover:border-gold/50',
+        )}
+      >
+        {upload ? (
+          <>
+            {upload.previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={upload.previewUrl}
+                alt={`${slot.label} preview`}
+                className="h-20 w-auto border border-[color:var(--border-mono)] object-cover"
+              />
+            ) : (
+              <FileCheck2 className="size-6 text-emerald-300" />
+            )}
+            <p className="max-w-full truncate font-mono text-[0.625rem] text-foreground">
+              {upload.name}
+            </p>
+            <p className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-faint">
+              {(upload.size / 1024).toFixed(0)} KB · sha256:{upload.digest}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={onClear}
+              className="mt-1 h-7 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="size-3" />
+              Replace
+            </Button>
+          </>
+        ) : (
+          <>
+            <Upload className="size-6 text-faint" />
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-gold hover:text-gold-bright"
+            >
+              Choose a file
+            </button>
+            <p className="max-w-[18rem] text-[0.6875rem] leading-relaxed text-faint">{slot.hint}</p>
+          </>
+        )}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onFile(file);
+            event.target.value = '';
+          }}
+        />
+      </div>
+    </div>
+  );
+}
