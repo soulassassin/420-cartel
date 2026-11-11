@@ -97,7 +97,7 @@ export default async function CrmPage({
       {/* ---- Controls ---------------------------------------------------- */}
       <div className="flex flex-col gap-4">
         <form action="/admin/crm" className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ash" />
           <Input
             name="q"
             defaultValue={search}
@@ -151,7 +151,7 @@ export default async function CrmPage({
                   {/* Identity */}
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-base uppercase tracking-[0.1em]">
+                      <span className="font-display text-base uppercase ">
                         {member.first_name} {member.last_name}
                       </span>
                       <Badge tone={STATUS_TONE[member.status]}>
@@ -164,7 +164,7 @@ export default async function CrmPage({
                         <Badge tone="warn">Unsigned</Badge>
                       ) : null}
                     </div>
-                    <span className="truncate font-mono text-[0.625rem] tracking-[0.14em] text-muted-foreground">
+                    <span className="truncate font-mono type-ui text-ash">
                       {member.member_code} · {member.phone} · {member.email}
                     </span>
                   </div>
@@ -180,7 +180,7 @@ export default async function CrmPage({
                     <Stat label="Rank" value={RANK_LABEL[member.rank]} tone="muted" />
                     <Stat label="LTV" value={formatCents(member.lifetime_value_cents)} />
                     <ArrowUpRight
-                      className={cn('size-4 shrink-0 text-faint transition-colors')}
+                      className={cn('size-4 shrink-0 text-ash transition-colors')}
                       aria-hidden="true"
                     />
                   </div>
@@ -192,14 +192,14 @@ export default async function CrmPage({
       )}
 
       {members.length === 100 ? (
-        <p className="flex items-center gap-2 font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+        <p className="flex items-center gap-2 font-mono type-ui text-ash">
           <Clock className="size-3" />
           Showing the 100 most recent — narrow with search
         </p>
       ) : null}
 
       {!viewer.isManager ? (
-        <p className="flex items-center gap-2 border-l-2 border-amber-500 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+        <p className="flex items-center gap-2 border-l-2 border-foreground bg-transparent px-4 py-3 type-ui text-foreground">
           <Users className="size-3.5 shrink-0" />
           You have read access. Approving KYC, adjusting credit and changing status require
           owner or manager rights.

@@ -85,7 +85,7 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
       {/* ---- Account credit --------------------------------------------- */}
       <Card className="flex flex-col gap-5 p-6">
         <div className="flex items-start justify-between gap-4">
-          <p className="font-display text-base uppercase tracking-[0.14em]">Account Credit</p>
+          <p className="font-display text-base uppercase ">Account Credit</p>
           <Stat label="Balance" value={formatCents(member.credit_balance_cents)} tone="gold" />
         </div>
 
@@ -130,10 +130,10 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
 
       {/* ---- Standing ---------------------------------------------------- */}
       <Card className="flex flex-col gap-5 p-6">
-        <p className="font-display text-base uppercase tracking-[0.14em]">Membership Standing</p>
+        <p className="font-display text-base uppercase ">Membership Standing</p>
 
         {suspended && member.suspended_reason ? (
-          <p className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 text-xs text-red-300">
+          <p className="border-l-2 border-foreground bg-transparent px-4 py-3 type-ui text-foreground">
             Suspended: {member.suspended_reason}
           </p>
         ) : null}
@@ -219,13 +219,13 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
       {error ? (
         <p
           role="alert"
-          className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+          className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
         >
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="border-l-2 border-gold bg-gold/5 px-4 py-3 font-mono text-[0.6875rem] text-gold">
+        <p className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
           {notice}
         </p>
       ) : null}

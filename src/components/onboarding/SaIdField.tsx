@@ -58,7 +58,7 @@ export function SaIdField({
           inputMode="numeric"
           autoComplete="off"
           placeholder="000000 0000 00 0"
-          className="font-mono text-lg tracking-[0.12em] tabular-nums"
+          className="font-mono text-lg tabular-nums"
           aria-invalid={Boolean(error)}
           aria-describedby={`${name}-readout`}
         />
@@ -71,7 +71,7 @@ export function SaIdField({
         className="min-h-[4.5rem] border border-[color:var(--border-mono)] bg-void px-4 py-3"
       >
         {!showFeedback ? (
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.22em] text-faint">
+          <p className="font-mono type-ui text-ash">
             Date of birth is read from your ID number
           </p>
         ) : result.valid ? (
@@ -103,14 +103,14 @@ export function SaIdField({
             )}
           </div>
         ) : (
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="font-mono type-ui text-ash">
             {digits.length}/13 digits
           </p>
         )}
       </div>
 
       {underage ? (
-        <p role="alert" className="font-mono text-[0.6875rem] leading-relaxed text-destructive">
+        <p role="alert" className="font-mono type-ui leading-relaxed text-foreground">
           420 Cartel is a private collective for adults {LEGAL_AGE} and over. We cannot process
           this application.
         </p>

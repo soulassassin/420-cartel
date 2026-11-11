@@ -231,7 +231,7 @@ export function selectCartUomTotals(state: CartState): Partial<Record<BaseUom, n
 /**
  * Base units of one product already committed across every line in the cart.
  *
- * This is what makes the multi-tier guard work: a 7g Quarter and a 3.5g Eighth
+ * This is what makes the multi-tier guard work: a 7g tier and a 3.5g tier
  * of the same batch are two lines but one 10.5g claim on that batch's balance,
  * and the shop refuses the second one if only 10g is left.
  */

@@ -64,12 +64,14 @@ export function buildPromoReelPrompt(input: PromoReelPromptInput): string {
 
   segments.push(`Mood: ${STRAIN_MOOD[input.strain]}.`);
 
-  const terpenes = input.terpeneTags.filter((tag) => tag.trim().length > 0).slice(0, 4);
-  if (terpenes.length > 0) {
-    segments.push(
-      `Terpene character to suggest visually: ${terpenes.join(', ')} — render as faint coloured-free ` +
-        'aromatic vapour trails that stay within the monochrome and gold palette.',
-    );
+  if (input.terpeneTags && input.terpeneTags.length > 0) {
+    const terpenes = input.terpeneTags.filter((tag) => tag.trim().length > 0).slice(0, 4);
+    if (terpenes.length > 0) {
+      segments.push(
+        `Terpene character to suggest visually: ${terpenes.join(', ')} — render as faint coloured-free ` +
+          'aromatic vapour trails that stay within the monochrome and gold palette.',
+      );
+    }
   }
 
   const stats: string[] = [];
@@ -85,7 +87,8 @@ export function buildPromoReelPrompt(input: PromoReelPromptInput): string {
   }
 
   segments.push(
-    'Absolutely no text, no logos, no watermarks, no human faces, and no consumption imagery in frame.',
+    'Strictly no text, no fake logos, no watermarks, no distorted human hands, ' +
+      'no cartoonish elements, no consumption imagery, and no underage imagery in frame.',
   );
 
   segments.push(HIGGSFIELD_VISUAL_FORMULA);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import Image from 'next/image';
 import {
   AlertTriangle,
   Boxes,
@@ -302,15 +303,15 @@ export default function AdminInventoryPage() {
           <div>
             <Eyebrow>Back Office · Module F & G</Eyebrow>
             <h1 className="mt-2 display-md text-white">
-              Vault <span className="gold-text">Inventory</span> & Higgsfield
+              Vault <span className="">Inventory</span> & Higgsfield
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-2 max-w-2xl type-ui text-ash">
               Master batch balances in base units (g, ml, units), immutable FIFO movement ledger,
               and Higgsfield AI 9:16 product reel synthesis.
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {(
               [
                 ['BATCHES', 'Master Batches', Boxes],
@@ -332,12 +333,12 @@ export default function AdminInventoryPage() {
         </header>
 
         {notice ? (
-          <p className="mt-6 border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-mono text-xs text-emerald-300">
+          <p className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
             {notice}
           </p>
         ) : null}
         {error ? (
-          <p className="mt-6 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-xs text-red-300">
+          <p className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
             {error}
           </p>
         ) : null}
@@ -349,19 +350,32 @@ export default function AdminInventoryPage() {
               {entries.map(({ product, batches, stock }) => (
                 <Card key={product.id} className="flex flex-col justify-between gap-4 p-5">
                   <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
-                          {product.sku} · {CATEGORY_LABEL[product.category]}
-                        </span>
-                        <h2 className="mt-1 font-display text-lg uppercase text-white">
-                          {product.name}
-                        </h2>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {product.hero_media_url ? (
+                          <div className="relative size-12 shrink-0 overflow-hidden rounded border border-[color:var(--border-mono)] bg-void">
+                            <Image
+                              src={product.hero_media_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                        ) : null}
+                        <div>
+                          <span className="font-mono type-ui text-ash">
+                            {product.sku} · {CATEGORY_LABEL[product.category]}
+                          </span>
+                          <h2 className="mt-1 font-display text-lg uppercase text-white">
+                            {product.name}
+                          </h2>
+                        </div>
                       </div>
                       {stock.is_low_stock ? (
                         <Badge tone="warn">
                           <AlertTriangle className="size-3" />
-                          Low Stock
+                          Low Stock (≤ {stock.low_stock_threshold} {UOM_SYMBOL[product.base_uom]})
                         </Badge>
                       ) : (
                         <Badge tone="live">In Stock</Badge>
@@ -369,27 +383,34 @@ export default function AdminInventoryPage() {
                     </div>
 
                     <div className="mt-4 flex items-baseline justify-between border border-[color:var(--border-mono)] bg-void p-3 font-mono">
-                      <span className="text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+                      <span className="type-ui text-ash">
                         Available ({product.base_uom})
                       </span>
-                      <span className="text-lg tabular-nums text-gold">
+                      <span className="text-lg tabular-nums text-foreground">
                         {stock.available_base_qty.toFixed(UOM_PRECISION[product.base_uom])}{' '}
                         {UOM_SYMBOL[product.base_uom]}
                       </span>
                     </div>
 
                     <div className="mt-4 space-y-2">
-                      <span className="font-mono text-[0.5625rem] uppercase tracking-[0.22em] text-faint">
+                      <span className="font-mono type-ui text-ash">
                         Active FIFO Batches ({batches.length})
                       </span>
                       {batches.map((batch) => (
                         <div
                           key={batch.id}
-                          className="flex items-center justify-between border border-[color:var(--border-mono)] px-3 py-2 font-mono text-xs"
+                          className="flex items-center justify-between border border-[color:var(--border-mono)] px-3 py-2 font-mono type-ui"
                         >
                           <div>
-                            <p className="text-white">{batch.batch_code}</p>
-                            <p className="text-[0.625rem] text-muted-foreground">
+                            <p className="text-white">
+                              {batch.batch_code}
+                              {batch.lab_thc_pct !== null && batch.lab_thc_pct !== undefined ? (
+                                <span className="ml-2 text-xs text-ash">
+                                  THC: {batch.lab_thc_pct}%
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="type-ui text-ash">
                               {formatBaseQty(batch.remaining_base_qty, product.base_uom)} /{' '}
                               {formatBaseQty(batch.received_base_qty, product.base_uom)} · Cost{' '}
                               {formatCents(batch.cost_per_base_unit_cents)}/
@@ -426,7 +447,7 @@ export default function AdminInventoryPage() {
                     id="nb_product"
                     value={newProductId || entries[0]?.product.id || ''}
                     onChange={(e) => setNewProductId(e.target.value)}
-                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs text-white"
+                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono type-ui text-white"
                   >
                     {entries.map((e) => (
                       <option key={e.product.id} value={e.product.id}>
@@ -504,8 +525,8 @@ export default function AdminInventoryPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left font-mono text-xs">
-                  <thead className="border-b border-[color:var(--border-mono)] bg-void text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+                <table className="w-full text-left font-mono type-ui">
+                  <thead className="border-b border-[color:var(--border-mono)] bg-void type-ui text-ash">
                     <tr>
                       <th className="px-4 py-3">Timestamp</th>
                       <th className="px-4 py-3">Type</th>
@@ -516,8 +537,8 @@ export default function AdminInventoryPage() {
                   </thead>
                   <tbody className="divide-y divide-[color:var(--border-mono)]">
                     {(movements.data ?? []).map((m) => (
-                      <tr key={m.id} className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-3 text-muted-foreground">
+                      <tr key={m.id} className="bg-transparent">
+                        <td className="px-4 py-3 text-ash">
                           {new Date(m.created_at).toLocaleTimeString('en-ZA', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -532,7 +553,7 @@ export default function AdminInventoryPage() {
                         <td
                           className={cn(
                             'px-4 py-3 tabular-nums',
-                            m.base_qty_delta >= 0 ? 'text-emerald-300' : 'text-amber-300',
+                            m.base_qty_delta >= 0 ? 'text-foreground' : 'text-foreground',
                           )}
                         >
                           {m.base_qty_delta >= 0 ? '+' : ''}
@@ -541,7 +562,7 @@ export default function AdminInventoryPage() {
                         <td className="px-4 py-3 tabular-nums text-white">
                           {formatBaseQty(m.balance_after, m.base_uom)}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{m.reason ?? '—'}</td>
+                        <td className="px-4 py-3 text-ash">{m.reason ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -558,9 +579,9 @@ export default function AdminInventoryPage() {
               <div>
                 <Eyebrow>Automated Promo Media Pipeline</Eyebrow>
                 <h2 className="mt-1 font-display text-xl uppercase text-white">
-                  Higgsfield <span className="gold-text">9:16 Reel Director</span>
+                  Higgsfield <span className="">9:16 Reel Director</span>
                 </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 type-ui text-ash">
                   Synthesizes macro trichome and obsidian-gold product reels for the dispensary
                   hover cards.
                 </p>
@@ -571,7 +592,7 @@ export default function AdminInventoryPage() {
                   id="hf_product"
                   value={selectedStudioEntry?.product.id ?? ''}
                   onChange={(e) => setStudioProductId(e.target.value)}
-                  className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs text-white"
+                  className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono type-ui text-white"
                 >
                   {entries.map((e) => (
                     <option key={e.product.id} value={e.product.id}>
@@ -587,7 +608,7 @@ export default function AdminInventoryPage() {
                     id="hf_cam"
                     value={cameraPreset}
                     onChange={(e) => setCameraPreset(e.target.value as CameraPreset)}
-                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs text-white"
+                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono type-ui text-white"
                   >
                     {(Object.keys(CAMERA_PRESET_LABEL) as CameraPreset[]).map((preset) => (
                       <option key={preset} value={preset}>
@@ -602,7 +623,7 @@ export default function AdminInventoryPage() {
                     id="hf_light"
                     value={lightingPreset}
                     onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
-                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs text-white"
+                    className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono type-ui text-white"
                   >
                     {(Object.keys(LIGHTING_PRESET_LABEL) as LightingPreset[]).map((preset) => (
                       <option key={preset} value={preset}>
@@ -628,7 +649,7 @@ export default function AdminInventoryPage() {
                   rows={5}
                   readOnly
                   value={composedPrompt}
-                  className="font-mono text-xs text-gold"
+                  className="font-mono type-ui text-foreground"
                 />
               </Field>
 
@@ -665,18 +686,18 @@ export default function AdminInventoryPage() {
                   {(mediaJobs.data ?? []).map((job) => (
                     <li
                       key={job.id}
-                      className="border border-[color:var(--border-mono)] bg-void p-3.5 font-mono text-xs"
+                      className="border border-[color:var(--border-mono)] bg-void p-3.5 font-mono type-ui"
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5 text-white">
-                          <Video className="size-3.5 text-gold" />
+                          <Video className="size-3.5 text-foreground" />
                           {job.kind}
                         </span>
                         <Badge tone={job.status === 'COMPLETED' ? 'live' : 'gold'}>
                           {job.status}
                         </Badge>
                       </div>
-                      <p className="mt-2 line-clamp-2 text-[0.6875rem] text-muted-foreground">
+                      <p className="mt-2 line-clamp-2 type-ui text-ash">
                         {job.prompt}
                       </p>
                     </li>
@@ -690,8 +711,8 @@ export default function AdminInventoryPage() {
 
       {/* Batch Adjustment Modal */}
       {adjustingBatch ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md space-y-4 border-gold p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 ">
+          <Card className="w-full max-w-md space-y-4 border-foreground p-6">
             <Eyebrow>Batch Balance Adjustment</Eyebrow>
             <h3 className="font-display text-lg uppercase text-white">
               {adjustingBatch.batch_code}
@@ -702,7 +723,7 @@ export default function AdminInventoryPage() {
                 id="adj_type"
                 value={adjType}
                 onChange={(e) => setAdjType(e.target.value as StockMovementType)}
-                className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs text-white"
+                className="h-11 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono type-ui text-white"
               >
                 {MOVEMENT_TYPES.map((t) => (
                   <option key={t} value={t}>

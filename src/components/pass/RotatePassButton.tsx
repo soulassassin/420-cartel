@@ -39,7 +39,7 @@ export function RotatePassButton() {
           Rotate QR Code
         </Button>
         {error ? (
-          <p role="alert" className="font-mono text-[0.625rem] text-destructive">
+          <p role="alert" className="font-mono type-ui text-foreground">
             {error}
           </p>
         ) : null}
@@ -48,8 +48,8 @@ export function RotatePassButton() {
   }
 
   return (
-    <div className="flex flex-col gap-3 border border-gold/40 bg-gold/5 p-4">
-      <p className="text-xs leading-relaxed text-muted-foreground">
+    <div className="flex flex-col gap-3 border border-ash bg-transparent p-4">
+      <p className="type-ui leading-relaxed text-ash">
         This immediately invalidates your current QR code. Anyone holding a photograph of it will
         no longer be able to use it — and neither will you until this page reloads.
       </p>

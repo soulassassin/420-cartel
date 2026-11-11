@@ -23,6 +23,7 @@ import { LEGAL_AGE, parseSaId, validatePassportDob } from '@/lib/sa-id';
 import { createMember, IS_LOCAL_PREVIEW, type LocalCreateMemberInput } from '@/lib/data/source';
 import { DEFAULT_BRANCH_ID } from '@/lib/demo/fixtures';
 import { useSessionStore } from '@/lib/store/session';
+import { createCartelBrowserClient } from '@/lib/supabase/client';
 import { REFERRAL_COOKIE } from '@/lib/loyalty';
 import { cn } from '@/lib/utils';
 import type { MemberRow } from '@/types/database';
@@ -80,6 +81,9 @@ export default function OnboardingPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  // Someone returning to finish onboarding already has an account.
+  const [needsAccount, setNeedsAccount] = useState(!IS_LOCAL_PREVIEW);
   const [saIdNumber, setSaIdNumber] = useState('');
   const [passportNumber, setPassportNumber] = useState('');
   const [passportCountry, setPassportCountry] = useState('');
@@ -92,6 +96,14 @@ export default function OnboardingPage() {
 
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const signIn = useSessionStore((state) => state.signIn);
+
+  useEffect(() => {
+    if (IS_LOCAL_PREVIEW) return;
+    void createCartelBrowserClient()
+      .auth.getUser()
+      .then(({ data }) => setNeedsAccount(!data.user))
+      .catch(() => undefined);
+  }, []);
 
   // Pick up `?ref=CARTEL-XXXX`, which middleware parked in a cookie.
   useEffect(() => {
@@ -136,7 +148,8 @@ export default function OnboardingPage() {
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) &&
-    /^(\+?27|0)[6-8][0-9]{8}$/.test(phone.replace(/\s/g, ''));
+    /^(\+?27|0)[6-8][0-9]{8}$/.test(phone.replace(/\s/g, '')) &&
+    (!needsAccount || password.length >= 8);
 
   const passportComplete =
     idMode === 'SA_ID' ||
@@ -226,11 +239,33 @@ export default function OnboardingPage() {
       homeBranchId: DEFAULT_BRANCH_ID,
       referredByCode: referralCode,
       // In local preview the collective approves instantly so `/shop` opens;
-      // against Supabase the member lands in PENDING_KYC for a human reviewer.
+      // against Supabase the member enters as PENDING_KYC, with Vault access, and
+      // stays in the staff review queue.
       autoApprove: IS_LOCAL_PREVIEW,
     };
 
     try {
+      // `submit_member_kyc` needs a signed-in user, so create the login first.
+      // Re-checked here so a retry after a failed submit does not sign up twice.
+      if (!IS_LOCAL_PREVIEW) {
+        const supabase = createCartelBrowserClient();
+        const { data: current } = await supabase.auth.getUser();
+        if (!current.user) {
+          const { data, error } = await supabase.auth.signUp({
+            email: payload.email,
+            password,
+          });
+          if (error) throw error;
+          if (!data.session) {
+            setFormError(
+              'Check your email to confirm your address, then log in to finish your membership.',
+            );
+            return;
+          }
+          setNeedsAccount(false);
+        }
+      }
+
       const member = await createMember(payload);
       setIssuedMember(member);
       signIn(member);
@@ -250,24 +285,32 @@ export default function OnboardingPage() {
     saIdNumber,
     passportNumber,
     passportCountry,
+    password,
     referralCode,
     signIn,
   ]);
 
   return (
     <main className="relative min-h-screen bg-void pb-32 pt-16">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-vault-radial" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] " />
 
       <div className="container relative max-w-3xl">
         <header className="flex flex-col gap-4">
           <Eyebrow>Private Collective Onboarding</Eyebrow>
           <h1 className="display-md text-white">
-            Join the <span className="gold-text">Cartel</span>
+            Join the <span className="">Cartel</span>
           </h1>
-          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-            420 Cartel is a private cannabis collective operating under South African personal
-            allocation law. Membership is restricted to verified adults {LEGAL_AGE} and over, and
-            every allocation is recorded against your member file.
+          <p className="max-w-xl type-ui leading-relaxed text-ash">
+            420 Cartel is a private cannabis collective and social lounge network operating under the
+            Cannabis for Private Purposes Act for adult private consumption. Membership is strictly restricted
+            to verified adults {LEGAL_AGE} and over (Strictly No Under 18). Digital passes grant access to our
+            Johannesburg lounges in Norwood, Rivonia, and Kibler Park, open daily 09:00 - 20:00.
+          </p>
+          <p className="type-ui text-ash">
+            Already a member?{' '}
+            <Link href="/login" className="ghost-link text-foreground">
+              Log in
+            </Link>
           </p>
           {referralCode ? (
             <Badge tone="gold" className="w-fit">
@@ -285,16 +328,16 @@ export default function OnboardingPage() {
                 key={label}
                 aria-current={state === 'current' ? 'step' : undefined}
                 className={cn(
-                  'flex items-center gap-2.5 border-t-2 pt-3 transition-colors duration-300',
-                  state === 'done' && 'border-gold/60 text-gold',
-                  state === 'current' && 'border-gold text-white',
-                  state === 'todo' && 'border-[color:var(--border-mono)] text-faint',
+                  'flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2.5 border-t-2 pt-3',
+                  state === 'done' && 'border-ash text-foreground',
+                  state === 'current' && 'border-foreground text-white',
+                  state === 'todo' && 'border-[color:var(--border-mono)] text-ash',
                 )}
               >
-                <span className="font-mono text-[0.625rem] tabular-nums">
+                <span className="font-mono text-xs sm:type-ui tabular-nums">
                   {state === 'done' ? <Check className="size-3.5" /> : `0${index + 1}`}
                 </span>
-                <span className="font-mono text-[0.625rem] uppercase tracking-[0.18em]">
+                <span className="font-mono text-xs sm:type-ui truncate">
                   {label}
                 </span>
               </li>
@@ -305,7 +348,7 @@ export default function OnboardingPage() {
         {formError ? (
           <p
             role="alert"
-            className="mt-8 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+            className="mt-8 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
           >
             {formError}
           </p>
@@ -346,7 +389,7 @@ export default function OnboardingPage() {
                     value={passportNumber}
                     onChange={(event) => setPassportNumber(event.target.value.toUpperCase())}
                     placeholder="A01234567"
-                    className="font-mono tracking-[0.1em]"
+                    className="font-mono "
                   />
                 </Field>
                 <Field
@@ -362,7 +405,7 @@ export default function OnboardingPage() {
                       setPassportCountry(event.target.value.toUpperCase().slice(0, 2))
                     }
                     placeholder="GB"
-                    className="font-mono tracking-[0.2em]"
+                    className="font-mono "
                   />
                 </Field>
                 <Field
@@ -428,6 +471,17 @@ export default function OnboardingPage() {
                   className="font-mono"
                 />
               </Field>
+              {needsAccount ? (
+                <Field label="Create Password" htmlFor="password" hint="8+ characters" required>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="new-password"
+                  />
+                </Field>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -437,7 +491,7 @@ export default function OnboardingPage() {
                   {LEGAL_AGE}+ Confirmed
                 </Badge>
               ) : (
-                <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+                <span className="font-mono type-ui text-ash">
                   Awaiting a valid document
                 </span>
               )}
@@ -463,10 +517,10 @@ export default function OnboardingPage() {
             <Card className="flex flex-col gap-6 p-6 sm:p-8">
               <div>
                 <Eyebrow>Step 02 · KYC</Eyebrow>
-                <h2 className="mt-2 font-display text-xl uppercase tracking-wide text-white">
+                <h2 className="mt-2 font-display text-xl uppercase text-white">
                   Document Verification
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 type-ui text-ash">
                   {IS_LOCAL_PREVIEW
                     ? 'Local preview: files are hashed in your browser and never uploaded. Against a configured project they go to the private kyc-documents bucket.'
                     : 'Files upload to the private kyc-documents bucket. Only the reviewing staff member can open them, through a short-lived signed URL.'}
@@ -489,15 +543,15 @@ export default function OnboardingPage() {
             <Card className="flex flex-col gap-5 p-6 sm:p-8">
               <div>
                 <Eyebrow>Private Grow-Club Mandate</Eyebrow>
-                <h2 className="mt-2 font-display text-xl uppercase tracking-wide text-white">
+                <h2 className="mt-2 font-display text-xl uppercase text-white">
                   Personal Allocation Agreement
                 </h2>
-                <p className="mt-1 font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+                <p className="mt-1 font-mono type-ui text-ash">
                   Version {MEMBERSHIP_AGREEMENT_VERSION}
                 </p>
               </div>
 
-              <div className="max-h-56 overflow-y-auto border border-[color:var(--border-mono)] bg-void p-4 text-[0.8125rem] leading-relaxed text-muted-foreground cartel-scroll">
+              <div className="max-h-56 overflow-y-auto border border-[color:var(--border-mono)] bg-void p-4 type-ui leading-relaxed text-ash cartel-scroll">
                 <p className="mb-3">
                   <strong className="text-foreground">1. Private collective.</strong> 420 Cartel is a
                   closed private collective. Cultivation is undertaken collectively on behalf of
@@ -539,9 +593,9 @@ export default function OnboardingPage() {
                   onChange={(event) => setAgreementSigned(event.target.checked)}
                   className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
                 />
-                <span className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                <span className="type-ui leading-relaxed text-ash">
                   I have read and digitally sign the{' '}
-                  <span className="text-gold">Personal Allocation Agreement</span> as{' '}
+                  <span className="text-foreground">Personal Allocation Agreement</span> as{' '}
                   <span className="text-foreground">
                     {firstName || 'your name'} {lastName}
                   </span>
@@ -556,7 +610,7 @@ export default function OnboardingPage() {
                   onChange={(event) => setAgeDeclared(event.target.checked)}
                   className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
                 />
-                <span className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                <span className="type-ui leading-relaxed text-ash">
                   I declare that I am {LEGAL_AGE} years or older and that the document details above
                   are mine.
                 </span>
@@ -592,12 +646,12 @@ export default function OnboardingPage() {
                 <ShieldCheck className="size-3" />
                 Membership Issued
               </Badge>
-              <h2 className="mt-5 font-display text-2xl uppercase tracking-wide text-white">
+              <h2 className="mt-5 font-display text-2xl uppercase text-white">
                 Welcome to the Cartel
               </h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+              <p className="mx-auto mt-3 max-w-md type-ui leading-relaxed text-ash">
                 {issuedMember.status === 'PENDING_KYC'
-                  ? 'Your pass is live and your documents are queued for review. A reviewer unlocks full allocation access once your KYC is approved.'
+                  ? 'Your pass is live and the Vault is open. Our team will review your documents in the background.'
                   : 'Your pass is live. Present the QR at the vault, or open the private dispensary to place your first allocation.'}
               </p>
             </div>
@@ -607,16 +661,37 @@ export default function OnboardingPage() {
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Button variant="gold" size="lg" asChild>
                 <Link href="/shop">
-                  Enter the Dispensary
+                  Enter the Vault
                   <ArrowRight className="size-4" />
                 </Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link href="/">Back to the Vault</Link>
               </Button>
             </div>
           </div>
         ) : null}
+        {/* Compliance and social footer */}
+        <footer className="mt-16 border-t border-[color:var(--border-mono)] pt-8 text-center text-sm text-ash">
+          <p>
+            420 Cartel &middot; Private Cannabis Social Lounge &amp; Botanical Collective &middot; Operating daily 09:00 - 20:00
+          </p>
+          <div className="mt-3 flex justify-center gap-6">
+            <a
+              href="https://www.instagram.com/fourtwentycartel/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ghost-link"
+            >
+              Instagram (@fourtwentycartel)
+            </a>
+            <a
+              href="https://www.facebook.com/p/The-Cartel-420-social-lounge-NO-UNDER-18-100041765415684/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ghost-link"
+            >
+              Facebook (The Cartel 420 Social Lounge)
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );
@@ -652,12 +727,12 @@ function Dropzone({
           if (file) onFile(file);
         }}
         className={cn(
-          'relative flex min-h-36 flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 text-center transition-colors duration-300',
+          'relative flex min-h-36 flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 text-center ',
           dragging
-            ? 'border-gold bg-gold/5'
+            ? 'border-foreground bg-transparent'
             : upload
-              ? 'border-emerald-500/50 bg-emerald-500/[0.04]'
-              : 'border-[color:var(--border-mono)] bg-void hover:border-gold/50',
+              ? 'border-foreground bg-transparent/[0.04]'
+              : 'border-[color:var(--border-mono)] bg-void hover:border-ash',
         )}
       >
         {upload ? (
@@ -670,12 +745,12 @@ function Dropzone({
                 className="h-20 w-auto border border-[color:var(--border-mono)] object-cover"
               />
             ) : (
-              <FileCheck2 className="size-6 text-emerald-300" />
+              <FileCheck2 className="size-6 text-foreground" />
             )}
-            <p className="max-w-full truncate font-mono text-[0.625rem] text-foreground">
+            <p className="max-w-full truncate font-mono type-ui text-foreground">
               {upload.name}
             </p>
-            <p className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-faint">
+            <p className="font-mono type-ui text-ash">
               {(upload.size / 1024).toFixed(0)} KB · sha256:{upload.digest}
             </p>
             <Button
@@ -683,7 +758,7 @@ function Dropzone({
               size="sm"
               type="button"
               onClick={onClear}
-              className="mt-1 h-7 text-destructive hover:text-destructive"
+              className="mt-1 h-7 text-foreground hover:text-foreground"
             >
               <Trash2 className="size-3" />
               Replace
@@ -691,15 +766,15 @@ function Dropzone({
           </>
         ) : (
           <>
-            <Upload className="size-6 text-faint" />
+            <Upload className="size-6 text-ash" />
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-gold hover:text-gold-bright"
+              className="font-mono type-ui text-foreground hover:text-foreground"
             >
               Choose a file
             </button>
-            <p className="max-w-[18rem] text-[0.6875rem] leading-relaxed text-faint">{slot.hint}</p>
+            <p className="max-w-[18rem] type-ui leading-relaxed text-ash">{slot.hint}</p>
           </>
         )}
 

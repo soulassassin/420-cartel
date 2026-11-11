@@ -4,12 +4,21 @@
  * lights consume the hex values directly, so both stay in lockstep here.
  */
 
+/**
+ * These feed the WebGL scene and the Higgsfield prompt formula, so they track
+ * the EDITORIAL shell's values — that is the only shell with 3D in it.
+ *
+ * `void` is true black now rather than #050505: the reference canvas is
+ * #000000, and a scene fogged to a near-black that does not match the page
+ * behind it leaves a visible rectangle where the canvas ends.
+ */
 export const CARTEL_COLORS = {
-  void: '#050505',
-  surface: '#0D0D0D',
-  elevated: '#131313',
+  void: '#000000',
+  surface: '#000000',
+  elevated: '#0A0A0A',
   textPrimary: '#FFFFFF',
-  textMuted: '#8E8E93',
+  /** Ash grey: metadata and anything that must recede behind the headline. */
+  textMuted: '#8E8E8E',
   gold: '#D4AF37',
   goldBright: '#F3E5AB',
   goldDeep: '#AA771C',
@@ -43,11 +52,11 @@ export const DPR_RANGE: [number, number] = [1, 1.5];
  * so generated media is indistinguishable in grade from the WebGL scenes.
  */
 export const HIGGSFIELD_VISUAL_FORMULA =
-  'Ultra-cinematic macro commercial shot, pitch-black obsidian studio background, ' +
-  'dramatic rim lighting with warm 24k metallic gold (#D4AF37) dust and highlights, ' +
-  'stark high-contrast black and white monochrome grading with selective gold accents, ' +
-  'slow-motion 120fps camera orbit, luxury streetwear cartel aesthetic, ' +
-  'shot on ARRI Alexa 65 Macro lens.';
+  'Ultra-cinematic macro commercial shot, deep obsidian black void background (#000000), ' +
+  'dramatic rim lighting with warm 24k metallic gold (#D4AF37) dust particulate and sharp specular highlights, ' +
+  'high-contrast monochrome grading with selective warm amber and 24k gold accents, ' +
+  'slow-motion 120fps camera orbit, luxury streetwear private social club aesthetic, ' +
+  'extreme botanical macro detail, shot on ARRI Alexa 65 Macro lens.';
 
 export const MEMBERSHIP_AGREEMENT_VERSION = '2026.1';
 

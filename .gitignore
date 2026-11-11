@@ -15,3 +15,4 @@ supabase/.branches/
 
 .vercel
 .env*
+supabase-start.log

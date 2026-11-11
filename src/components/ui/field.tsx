@@ -16,7 +16,7 @@ export const Label = React.forwardRef<
   <LabelPrimitive.Root
     ref={ref}
     className={cn(
-      'font-mono text-[0.625rem] uppercase tracking-[0.28em] text-muted-foreground',
+      'font-mono type-ui text-ash',
       className,
     )}
     {...props}
@@ -30,10 +30,10 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       ref={ref}
       type={type}
       className={cn(
-        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-base text-foreground transition-colors duration-300 ease-cartel',
-        'placeholder:text-faint focus:border-gold focus:outline-none focus:shadow-gold-focus',
+        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground ',
+        'placeholder:text-ash focus:border-foreground focus:outline-none ',
         'disabled:cursor-not-allowed disabled:opacity-40',
-        'aria-[invalid=true]:border-destructive',
+        'aria-[invalid=true]:border-foreground',
         className,
       )}
       {...props}
@@ -49,8 +49,8 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'min-h-24 w-full resize-y border border-[color:var(--border-mono)] bg-surface px-4 py-3 text-base text-foreground transition-colors duration-300 ease-cartel',
-      'placeholder:text-faint focus:border-gold focus:outline-none focus:shadow-gold-focus',
+      'min-h-24 w-full resize-y border border-[color:var(--border-mono)] bg-surface px-4 py-3 type-ui text-foreground ',
+      'placeholder:text-ash focus:border-foreground focus:outline-none ',
       'cartel-scroll',
       className,
     )}
@@ -71,15 +71,15 @@ export const NumericInput = React.forwardRef<
       inputMode="decimal"
       autoComplete="off"
       className={cn(
-        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-right font-mono text-lg tabular-nums text-foreground transition-colors duration-300 ease-cartel',
-        'placeholder:text-faint focus:border-gold focus:outline-none focus:shadow-gold-focus',
+        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-right font-mono text-lg tabular-nums text-foreground ',
+        'placeholder:text-ash focus:border-foreground focus:outline-none ',
         suffix ? 'pr-12' : '',
         className,
       )}
       {...props}
     />
     {suffix ? (
-      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-gold">
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-mono type-ui text-foreground">
         {suffix}
       </span>
     ) : null}
@@ -111,15 +111,15 @@ export function Field({
       <div className="flex items-baseline justify-between gap-3">
         <Label htmlFor={htmlFor}>
           {label}
-          {required ? <span className="ml-1 text-gold">*</span> : null}
+          {required ? <span className="ml-1 text-foreground">*</span> : null}
         </Label>
         {hint && !error ? (
-          <span className="font-mono text-[0.625rem] text-faint">{hint}</span>
+          <span className="font-mono type-ui text-ash">{hint}</span>
         ) : null}
       </div>
       {children}
       {error ? (
-        <p role="alert" className="font-mono text-[0.6875rem] text-destructive">
+        <p role="alert" className="font-mono type-ui text-foreground">
           {error}
         </p>
       ) : null}

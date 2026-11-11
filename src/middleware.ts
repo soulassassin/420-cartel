@@ -15,7 +15,7 @@ import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE, affiliateTracker } from '@/li
  *     Postgres is the real boundary; this is only about not wasting a render.
  */
 
-const MEMBER_ROUTES = ['/shop', '/checkout', '/account', '/pass'];
+const MEMBER_ROUTES = ['/vault', '/shop', '/checkout', '/account', '/pass'];
 const STAFF_ROUTES = ['/pos', '/admin'];
 
 export async function middleware(request: NextRequest) {
@@ -71,11 +71,49 @@ export async function middleware(request: NextRequest) {
   const needsMember = MEMBER_ROUTES.some((route) => path.startsWith(route));
   const needsStaff = STAFF_ROUTES.some((route) => path.startsWith(route));
 
+  // The Vault sends strangers to Membership; profile pages ask them to log in.
   if ((needsMember || needsStaff) && !user) {
     const target = request.nextUrl.clone();
-    target.pathname = needsStaff ? '/staff-login' : '/onboarding';
+    const profilePage = path.startsWith('/account') || path.startsWith('/pass');
+    target.pathname = needsStaff ? '/staff-login' : profilePage ? '/login' : '/onboarding';
     target.searchParams.set('next', path);
     return NextResponse.redirect(target);
+  }
+
+  // Having an account is not the same as having signed up: without a member
+  // row, onboarding is unfinished. Staff are exempt.
+  if (needsMember) {
+    const [{ data: member }, { data: staff }] = await Promise.all([
+      supabase.from('members').select('id').eq('id', user!.id).maybeSingle(),
+      supabase.from('staff_profiles').select('is_active').eq('id', user!.id).maybeSingle(),
+    ]);
+
+    if (!member && !staff?.is_active) {
+      const target = request.nextUrl.clone();
+      target.pathname = '/onboarding';
+      target.search = '';
+      return NextResponse.redirect(target);
+    }
+  }
+
+  // Being signed in is NOT the same as being staff. Without this, any member
+  // with an account could open the POS terminal and the KYC review queue just
+  // by typing the URL — every member's ID document sits behind that route.
+  // `staff_read_self_and_colleagues` means a non-staff caller simply reads no
+  // row here rather than erroring, so a missing row is the denial.
+  if (needsStaff) {
+    const { data: staff } = await supabase
+      .from('staff_profiles')
+      .select('is_active')
+      .eq('id', user!.id)
+      .maybeSingle();
+
+    if (!staff?.is_active) {
+      const target = request.nextUrl.clone();
+      target.pathname = '/';
+      target.search = '';
+      return NextResponse.redirect(target);
+    }
   }
 
   return response;

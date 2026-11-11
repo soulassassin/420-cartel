@@ -89,7 +89,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
                 id="passport_number"
                 name="passport_number"
                 autoComplete="off"
-                className="font-mono tracking-wider"
+                className="font-mono "
               />
             </Field>
 
@@ -103,7 +103,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
                 id="passport_country"
                 name="passport_country"
                 defaultValue="ZA"
-                className="h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-base text-foreground focus:border-gold focus:outline-none"
+                className="h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground focus:border-foreground focus:outline-none"
               >
                 {PASSPORT_COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
@@ -187,7 +187,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
             {PREFERRED_UOMS.map((uom, index) => (
               <label
                 key={uom}
-                className="hairline-active flex cursor-pointer items-center justify-center bg-surface px-3 py-3 font-mono text-[0.625rem] uppercase tracking-[0.18em] has-[:checked]:border-gold has-[:checked]:text-gold"
+                className="hairline-active flex cursor-pointer items-center justify-center bg-surface px-3 py-3 font-mono type-ui has-[:checked]:border-foreground has-[:checked]:text-foreground"
               >
                 <input
                   type="radio"
@@ -207,7 +207,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
             <select
               id="home_branch_id"
               name="home_branch_id"
-              className="h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-base text-foreground focus:border-gold focus:outline-none"
+              className="h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground focus:border-foreground focus:outline-none"
             >
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
@@ -231,13 +231,13 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
               name="accept_age"
               className="mt-1 size-4 shrink-0 accent-[color:var(--accent-gold)]"
             />
-            <span className="text-sm leading-relaxed text-muted-foreground">
+            <span className="type-ui leading-relaxed text-ash">
               I confirm I am <span className="text-foreground">{LEGAL_AGE} years or older</span> and
               that the identity document I have supplied is my own.
             </span>
           </label>
           {fieldErrors.accept_age ? (
-            <p role="alert" className="font-mono text-[0.6875rem] text-destructive">
+            <p role="alert" className="font-mono type-ui text-foreground">
               {fieldErrors.accept_age}
             </p>
           ) : null}
@@ -248,14 +248,14 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
               name="accept_terms"
               className="mt-1 size-4 shrink-0 accent-[color:var(--accent-gold)]"
             />
-            <span className="text-sm leading-relaxed text-muted-foreground">
+            <span className="type-ui leading-relaxed text-ash">
               I have read and accept the{' '}
-              <span className="text-gold">420 Cartel Private Member Agreement</span> and consent to
+              <span className="text-foreground">420 Cartel Private Member Agreement</span> and consent to
               my identity documents being stored for compliance purposes.
             </span>
           </label>
           {fieldErrors.accept_terms ? (
-            <p role="alert" className="font-mono text-[0.6875rem] text-destructive">
+            <p role="alert" className="font-mono type-ui text-foreground">
               {fieldErrors.accept_terms}
             </p>
           ) : null}
@@ -267,7 +267,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
               value="true"
               className="mt-1 size-4 shrink-0 accent-[color:var(--accent-gold)]"
             />
-            <span className="text-sm leading-relaxed text-muted-foreground">
+            <span className="type-ui leading-relaxed text-ash">
               Send me new drop announcements. Optional.
             </span>
           </label>
@@ -277,7 +277,7 @@ export function IdentityForm({ branches }: { branches: BranchRow[] }) {
       {formError ? (
         <p
           role="alert"
-          className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+          className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
         >
           {formError}
         </p>

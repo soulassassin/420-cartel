@@ -74,20 +74,20 @@ export function AgreementStep() {
       <Card className="cartel-scroll max-h-80 overflow-y-auto p-6">
         <div className="flex flex-col gap-5">
           <div className="flex items-baseline justify-between gap-4">
-            <p className="font-display text-base uppercase tracking-[0.16em]">
+            <p className="font-display text-base uppercase ">
               Private Member Agreement
             </p>
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono type-ui text-ash">
               v{MEMBERSHIP_AGREEMENT_VERSION}
             </span>
           </div>
 
           {AGREEMENT_CLAUSES.map((clause, index) => (
             <div key={clause.heading} className="flex flex-col gap-1.5">
-              <p className="font-mono text-[0.625rem] uppercase tracking-[0.22em] text-gold">
+              <p className="font-mono type-ui text-foreground">
                 {String(index + 1).padStart(2, '0')} · {clause.heading}
               </p>
-              <p className="text-sm leading-relaxed text-muted-foreground">{clause.body}</p>
+              <p className="type-ui leading-relaxed text-ash">{clause.body}</p>
             </div>
           ))}
         </div>
@@ -101,7 +101,7 @@ export function AgreementStep() {
       {error ? (
         <p
           role="alert"
-          className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+          className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
         >
           {error}
         </p>

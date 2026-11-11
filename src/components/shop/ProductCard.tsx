@@ -39,14 +39,14 @@ export function ProductCard({
             alt={product.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition-transform duration-700 ease-cartel group-hover:scale-[1.04]"
+            className="object-cover group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="absolute inset-0 bg-vault-radial" />
+          <div className="absolute inset-0 " />
         )}
 
         {/* Gradient so white type stays legible over any render. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-void via-void/20 to-transparent" />
+        <div className="absolute inset-0 " />
 
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <Badge tone="mono">{CATEGORY_LABEL[product.category]}</Badge>
@@ -58,10 +58,10 @@ export function ProductCard({
         </div>
 
         <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
-          <h3 className="font-display text-xl font-bold uppercase leading-none tracking-tight">
+          <h3 className="font-display text-xl font-bold uppercase leading-none ">
             {product.name}
           </h3>
-          <span className="shrink-0 font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-gold">
+          <span className="shrink-0 font-mono type-ui text-foreground">
             {UOM_SYMBOL[product.base_uom]}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function ProductCard({
       {/* ---- Body -------------------------------------------------------- */}
       <div className="flex flex-1 flex-col gap-5 p-5">
         {product.short_tagline ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">{product.short_tagline}</p>
+          <p className="type-ui leading-relaxed text-ash">{product.short_tagline}</p>
         ) : null}
 
         {/* Lab stats — always visible, they are the brand story not the price. */}
@@ -93,7 +93,7 @@ export function ProductCard({
             {product.terpene_tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
-                className="border border-[color:var(--border-mono)] px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground"
+                className="border border-[color:var(--border-mono)] px-2 py-0.5 font-mono type-ui text-ash"
               >
                 {tag}
               </span>
@@ -106,13 +106,13 @@ export function ProductCard({
           {gated ? (
             <Link
               href="/onboarding"
-              className="flex items-center justify-between gap-3 border border-dashed border-gold/40 px-4 py-3 transition-colors duration-300 hover:border-gold hover:bg-gold/5"
+              className="flex items-center justify-between gap-3 border border-dashed border-ash px-4 py-3 hover:border-foreground hover:bg-transparent"
             >
-              <span className="flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.2em] text-gold">
+              <span className="flex items-center gap-2 font-mono type-ui text-foreground">
                 <Lock className="size-3" />
                 Members Only
               </span>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="font-mono type-ui text-ash">
                 Unlock Pricing
               </span>
             </Link>
@@ -131,7 +131,7 @@ export function ProductCard({
         </div>
 
         {gated && entry !== null ? (
-          <p className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+          <p className="font-mono type-ui text-ash">
             From {formatCents(entry)}
           </p>
         ) : null}

@@ -59,7 +59,7 @@ import {
 } from './fixtures';
 
 const STORAGE_KEY = 'cartel-local-db';
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 export interface LocalDb {
   version: number;

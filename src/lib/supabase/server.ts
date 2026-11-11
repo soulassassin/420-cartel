@@ -105,7 +105,9 @@ export async function getViewer(): Promise<CartelViewer> {
     isActiveMember: Boolean(
       member &&
         member.age_verified_at !== null &&
-        (member.status === 'ACTIVE_MEMBER' || member.status === 'VIP'),
+        (member.status === 'ACTIVE_MEMBER' ||
+          member.status === 'VIP' ||
+          (member.status === 'PENDING_KYC' && member.suspended_reason === null)),
     ),
   };
 }

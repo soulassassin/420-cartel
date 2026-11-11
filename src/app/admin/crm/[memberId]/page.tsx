@@ -137,7 +137,7 @@ export default async function MemberDetailPage({
         <div className="flex flex-col gap-6">
           {/* Identity record */}
           <Card className="flex flex-col gap-5 p-6">
-            <p className="font-display text-base uppercase tracking-[0.14em]">Identity Record</p>
+            <p className="font-display text-base uppercase ">Identity Record</p>
             <Separator />
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
               <Stat label="Document" value={typedMember.id_document_type.replace('_', ' ')} />
@@ -171,7 +171,7 @@ export default async function MemberDetailPage({
                 tone={typedMember.agreement_signed_at ? 'default' : 'muted'}
               />
             </div>
-            <p className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <p className="font-mono type-ui text-ash">
               ID numbers are masked in the CRM and are not searchable
             </p>
           </Card>
@@ -182,7 +182,7 @@ export default async function MemberDetailPage({
           {/* Order history */}
           <Card className="flex flex-col gap-5 p-6">
             <div className="flex items-start justify-between gap-4">
-              <p className="font-display text-base uppercase tracking-[0.14em]">Recent Orders</p>
+              <p className="font-display text-base uppercase ">Recent Orders</p>
               <div className="flex gap-5">
                 <Stat label="In-Store" value={posOrders} tone="muted" />
                 <Stat label="Online" value={onlineOrders} tone="muted" />
@@ -190,7 +190,7 @@ export default async function MemberDetailPage({
             </div>
             <Separator />
             {orders.length === 0 ? (
-              <p className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+              <p className="font-mono type-ui text-ash">
                 No orders yet
               </p>
             ) : (
@@ -198,10 +198,10 @@ export default async function MemberDetailPage({
                 {orders.map((order) => (
                   <div key={order.id} className="flex items-center justify-between gap-4 py-3">
                     <div className="flex min-w-0 flex-col gap-1">
-                      <span className="font-mono text-xs tracking-[0.12em]">
+                      <span className="font-mono type-ui ">
                         {order.order_number}
                       </span>
-                      <span className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-faint">
+                      <span className="font-mono type-ui text-ash">
                         {order.channel} · {order.fulfilment_type} ·{' '}
                         {new Date(order.created_at).toLocaleDateString('en-ZA')}
                       </span>
@@ -218,7 +218,7 @@ export default async function MemberDetailPage({
                       >
                         {order.status.replace(/_/g, ' ')}
                       </Badge>
-                      <span className="font-mono text-sm tabular-nums">
+                      <span className="font-mono type-ui tabular-nums">
                         {formatCents(order.total_cents)}
                       </span>
                     </div>
@@ -235,7 +235,7 @@ export default async function MemberDetailPage({
             <MemberAdminPanel member={typedMember} />
           ) : (
             <Card className="p-6">
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="type-ui leading-relaxed text-ash">
                 Credit adjustments and status changes require owner or manager rights.
               </p>
             </Card>
@@ -243,7 +243,7 @@ export default async function MemberDetailPage({
 
           {/* Preferences & rank */}
           <Card className="flex flex-col gap-5 p-6">
-            <p className="font-display text-base uppercase tracking-[0.14em]">Profile</p>
+            <p className="font-display text-base uppercase ">Profile</p>
             <Separator />
             <div className="grid grid-cols-2 gap-5">
               <Stat label="Preferred" value={UOM_LABEL[typedMember.preferred_uom]} tone="muted" />
@@ -263,16 +263,16 @@ export default async function MemberDetailPage({
             {progress.next ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
-                  <span className="font-mono text-[0.5rem] uppercase tracking-[0.26em] text-faint">
+                  <span className="font-mono type-ui text-ash">
                     To {RANK_LABEL[progress.next]}
                   </span>
-                  <span className="font-mono text-[0.625rem] tabular-nums text-gold">
+                  <span className="font-mono type-ui tabular-nums text-foreground">
                     {progress.centsToNext !== null ? formatCents(progress.centsToNext) : '—'}
                   </span>
                 </div>
                 <div className="h-0.5 w-full bg-[color:var(--border-mono)]">
                   <div
-                    className="h-full bg-gold"
+                    className="h-full bg-transparent"
                     style={{ width: `${Math.round(progress.progress * 100)}%` }}
                   />
                 </div>
@@ -282,10 +282,10 @@ export default async function MemberDetailPage({
 
           {/* Ledgers */}
           <Card className="flex flex-col gap-5 p-6">
-            <p className="font-display text-base uppercase tracking-[0.14em]">Credit Ledger</p>
+            <p className="font-display text-base uppercase ">Credit Ledger</p>
             <Separator />
             {credit.length === 0 ? (
-              <p className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+              <p className="font-mono type-ui text-ash">
                 No adjustments
               </p>
             ) : (
@@ -293,16 +293,16 @@ export default async function MemberDetailPage({
                 {credit.map((entry) => (
                   <div key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate text-xs text-muted-foreground">
+                      <span className="truncate type-ui text-ash">
                         {entry.reason}
                       </span>
-                      <span className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-faint">
+                      <span className="font-mono type-ui text-ash">
                         {new Date(entry.created_at).toLocaleDateString('en-ZA')}
                       </span>
                     </div>
                     <span
-                      className={`shrink-0 font-mono text-xs tabular-nums ${
-                        entry.delta_cents > 0 ? 'text-emerald-300' : 'text-red-300'
+                      className={`shrink-0 font-mono type-ui tabular-nums ${
+                        entry.delta_cents > 0 ? 'text-foreground' : 'text-foreground'
                       }`}
                     >
                       {entry.delta_cents > 0 ? '+' : ''}
@@ -315,10 +315,10 @@ export default async function MemberDetailPage({
           </Card>
 
           <Card className="flex flex-col gap-5 p-6">
-            <p className="font-display text-base uppercase tracking-[0.14em]">Points Ledger</p>
+            <p className="font-display text-base uppercase ">Points Ledger</p>
             <Separator />
             {loyalty.length === 0 ? (
-              <p className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+              <p className="font-mono type-ui text-ash">
                 No points activity
               </p>
             ) : (
@@ -326,17 +326,17 @@ export default async function MemberDetailPage({
                 {loyalty.map((entry) => (
                   <div key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate text-xs text-muted-foreground">
+                      <span className="truncate type-ui text-ash">
                         {entry.reason}
                       </span>
-                      <span className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-faint">
+                      <span className="font-mono type-ui text-ash">
                         {new Date(entry.created_at).toLocaleDateString('en-ZA')} · bal{' '}
                         {entry.balance_after}
                       </span>
                     </div>
                     <span
-                      className={`shrink-0 font-mono text-xs tabular-nums ${
-                        entry.points_delta > 0 ? 'text-emerald-300' : 'text-red-300'
+                      className={`shrink-0 font-mono type-ui tabular-nums ${
+                        entry.points_delta > 0 ? 'text-foreground' : 'text-foreground'
                       }`}
                     >
                       {entry.points_delta > 0 ? '+' : ''}

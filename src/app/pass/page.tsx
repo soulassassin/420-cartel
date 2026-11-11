@@ -42,9 +42,9 @@ export default function MemberPassPage() {
         <header className="text-center">
           <Eyebrow>Private Collective Credential</Eyebrow>
           <h1 className="mt-2 display-md text-white">
-            Member <span className="gold-text">Pass</span>
+            Member <span className="">Pass</span>
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 type-ui text-ash">
             Present this pass at the Sandton Vault counter or share your referral link to earn
             collective store credit.
           </p>
@@ -52,8 +52,8 @@ export default function MemberPassPage() {
 
         {members.length > 1 ? (
           <Card className="flex w-full flex-wrap items-center justify-between gap-2 p-3">
-            <span className="flex items-center gap-1.5 font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
-              <Sparkles className="size-3 text-gold" />
+            <span className="flex items-center gap-1.5 font-mono type-ui text-ash">
+              <Sparkles className="size-3 text-foreground" />
               Active Holder:
             </span>
             <div className="flex flex-wrap gap-1.5">

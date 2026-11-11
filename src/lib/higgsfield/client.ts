@@ -29,6 +29,7 @@ export interface SubmitMediaJobInput {
   /** Our own job row id, echoed back on the webhook. */
   correlationId: string;
   webhookUrl?: string;
+  signal?: AbortSignal;
 }
 
 export interface SubmitMediaJobResult {
@@ -48,7 +49,7 @@ export interface MediaJobStatusResult {
 export interface HiggsfieldClient {
   readonly configured: boolean;
   submit(input: SubmitMediaJobInput): Promise<SubmitMediaJobResult>;
-  status(providerJobId: string): Promise<MediaJobStatusResult>;
+  status(providerJobId: string, signal?: AbortSignal): Promise<MediaJobStatusResult>;
 }
 
 export class HiggsfieldNotConfiguredError extends Error {
@@ -81,6 +82,9 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: Json };
 }
 
+/** Default request timeout in milliseconds to prevent pipeline hanging. */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 /** MCP streamable-HTTP transport. */
 class HiggsfieldMcpClient implements HiggsfieldClient {
   public readonly configured = true;
@@ -100,22 +104,32 @@ class HiggsfieldMcpClient implements HiggsfieldClient {
   private async callTool(
     name: string,
     args: Record<string, Json>,
+    signal?: AbortSignal,
   ): Promise<Record<string, Json>> {
-    const response = await fetch(this.endpoint, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        accept: 'application/json, text/event-stream',
-        authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: crypto.randomUUID(),
-        method: 'tools/call',
-        params: { name, arguments: args },
-      }),
-      cache: 'no-store',
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: crypto.randomUUID(),
+          method: 'tools/call',
+          params: { name, arguments: args },
+        }),
+        cache: 'no-store',
+        signal: signal ?? AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      });
+    } catch (caught) {
+      if (caught instanceof Error && (caught.name === 'AbortError' || caught.name === 'TimeoutError')) {
+        throw new HiggsfieldRequestError(`Higgsfield request timed out or was aborted: ${caught.message}`, 408);
+      }
+      throw caught;
+    }
 
     if (!response.ok) {
       throw new HiggsfieldRequestError(
@@ -165,12 +179,16 @@ class HiggsfieldMcpClient implements HiggsfieldClient {
   }
 
   async submit(input: SubmitMediaJobInput): Promise<SubmitMediaJobResult> {
-    const result = await this.callTool(this.submitTool, {
-      prompt: input.prompt,
-      ...input.params,
-      metadata: { correlation_id: input.correlationId },
-      ...(input.webhookUrl ? { webhook_url: input.webhookUrl } : {}),
-    });
+    const result = await this.callTool(
+      this.submitTool,
+      {
+        prompt: input.prompt,
+        ...input.params,
+        metadata: { correlation_id: input.correlationId },
+        ...(input.webhookUrl ? { webhook_url: input.webhookUrl } : {}),
+      },
+      input.signal,
+    );
 
     const providerJobId = HiggsfieldMcpClient.pickString(result, 'job_id', 'id', 'jobId');
     if (!providerJobId) {
@@ -184,8 +202,8 @@ class HiggsfieldMcpClient implements HiggsfieldClient {
     };
   }
 
-  async status(providerJobId: string): Promise<MediaJobStatusResult> {
-    const result = await this.callTool(this.statusTool, { job_id: providerJobId });
+  async status(providerJobId: string, signal?: AbortSignal): Promise<MediaJobStatusResult> {
+    const result = await this.callTool(this.statusTool, { job_id: providerJobId }, signal);
 
     const raw = (HiggsfieldMcpClient.pickString(result, 'status') ?? 'processing').toUpperCase();
     const status: MediaJobStatusResult['status'] =
@@ -216,7 +234,7 @@ class HiggsfieldNotConfiguredClient implements HiggsfieldClient {
     throw new HiggsfieldNotConfiguredError();
   }
 
-  async status(): Promise<MediaJobStatusResult> {
+  async status(_providerJobId?: string, _signal?: AbortSignal): Promise<MediaJobStatusResult> {
     throw new HiggsfieldNotConfiguredError();
   }
 }

@@ -389,17 +389,17 @@ export default function CheckoutPage() {
     return (
       <main className="relative min-h-screen bg-void pb-32 pt-14">
         <div className="container max-w-2xl">
-          <Card className="border-gold/50 p-6 sm:p-10">
+          <Card className="border-ash p-6 sm:p-10">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <Badge tone="live">
                   <Check className="size-3" />
                   Allocation Confirmed
                 </Badge>
-                <h1 className="mt-3 font-display text-3xl uppercase tracking-wide text-white">
-                  Order <span className="gold-text">{receipt.order_number}</span>
+                <h1 className="mt-3 font-display text-3xl uppercase text-white">
+                  Order <span className="">{receipt.order_number}</span>
                 </h1>
-                <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="mt-1 font-mono type-ui text-ash">
                   {receipt.fulfilment_type.replace(/_/g, ' ')} · Status: {receipt.status}
                 </p>
               </div>
@@ -419,11 +419,11 @@ export default function CheckoutPage() {
                     <span className="font-display text-sm uppercase text-white">
                       {item.quantity}× {item.product_name} ({item.variant_label})
                     </span>
-                    <span className="font-mono text-sm tabular-nums text-gold">
+                    <span className="font-mono type-ui tabular-nums text-foreground">
                       {formatCents(item.line_total_cents)}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-faint">
+                  <div className="flex flex-wrap items-center justify-between gap-2 font-mono type-ui text-ash">
                     <span>
                       Deducted: {formatBaseQty(item.base_qty, item.base_uom)} from vault
                     </span>
@@ -440,18 +440,18 @@ export default function CheckoutPage() {
 
             <Separator className="my-6" />
 
-            <dl className="space-y-2 font-mono text-xs">
-              <div className="flex justify-between text-muted-foreground">
+            <dl className="space-y-2 font-mono type-ui">
+              <div className="flex justify-between text-ash">
                 <dt>Subtotal</dt>
                 <dd className="tabular-nums">{formatCents(receipt.subtotal_cents)}</dd>
               </div>
               {receipt.discount_cents > 0 ? (
-                <div className="flex justify-between text-emerald-300">
+                <div className="flex justify-between text-foreground">
                   <dt>Loyalty / Member Discount</dt>
                   <dd className="tabular-nums">-{formatCents(receipt.discount_cents)}</dd>
                 </div>
               ) : null}
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-ash">
                 <dt>Courier / Dispatch Fee</dt>
                 <dd className="tabular-nums">
                   {receipt.delivery_fee_cents === 0
@@ -459,17 +459,17 @@ export default function CheckoutPage() {
                     : formatCents(receipt.delivery_fee_cents)}
                 </dd>
               </div>
-              <div className="flex justify-between text-faint">
+              <div className="flex justify-between text-ash">
                 <dt>15% SA VAT Included</dt>
                 <dd className="tabular-nums">{formatCents(vatPortionCents(receipt.total_cents))}</dd>
               </div>
-              <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-3 text-base text-white">
-                <dt className="uppercase tracking-[0.2em]">Total Settled</dt>
-                <dd className="tabular-nums text-gold">{formatCents(receipt.total_cents)}</dd>
+              <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-3 type-ui text-white">
+                <dt className="">Total Settled</dt>
+                <dd className="tabular-nums text-foreground">{formatCents(receipt.total_cents)}</dd>
               </div>
             </dl>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gold/30 bg-gold/5 px-4 py-3 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-gold">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-ash bg-transparent px-4 py-3 font-mono type-ui text-foreground">
               <span>+{receipt.points_earned} Loyalty Points Accrued</span>
               {receipt.points_redeemed > 0 ? (
                 <span>-{receipt.points_redeemed} Points Redeemed</span>
@@ -501,7 +501,7 @@ export default function CheckoutPage() {
           <div>
             <Eyebrow>Private Allocation Settlement</Eyebrow>
             <h1 className="mt-2 display-md text-white">
-              Vault <span className="gold-text">Checkout</span>
+              Vault <span className="">Checkout</span>
             </h1>
           </div>
           <Button variant="ghost" size="sm" asChild>
@@ -513,23 +513,26 @@ export default function CheckoutPage() {
         </div>
 
         {!isVerifiedMember(member) ? (
-          <Card className="mt-8 flex flex-wrap items-center justify-between gap-4 border-gold/40 p-6">
+          <Card className="mt-8 flex flex-wrap items-center justify-between gap-4 border-ash p-6">
             <div className="flex items-center gap-3">
-              <Lock className="size-5 text-gold" />
+              <Lock className="size-5 text-foreground" />
               <div>
-                <p className="font-display text-sm uppercase tracking-wider text-white">
+                <p className="font-display text-sm uppercase text-white">
                   {LEGAL_AGE}+ Member Verification Required
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Sign in with your member pass or simulate CARTEL-0420 to test checkout.
+                <p className="type-ui text-ash">
+                  Sign in with your member pass to complete checkout.
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="gold" size="sm" onClick={() => void simulateVerified()}>
-                <Sparkles className="size-3.5" />
-                Simulate CARTEL-0420
-              </Button>
+            <div className="flex flex-wrap gap-[18px]">
+              {/* Client-side demo sign-in: never offered on a live deployment. */}
+              {IS_LOCAL_PREVIEW ? (
+                <Button variant="gold" size="sm" onClick={() => void simulateVerified()}>
+                  <Sparkles className="size-3.5" />
+                  Simulate CARTEL-0420
+                </Button>
+              ) : null}
               <Button variant="outline" size="sm" asChild>
                 <Link href="/onboarding">Complete {LEGAL_AGE}+ Onboarding</Link>
               </Button>
@@ -540,7 +543,7 @@ export default function CheckoutPage() {
         {error ? (
           <p
             role="alert"
-            className="mt-6 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-xs text-red-300"
+            className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
           >
             {error}
           </p>
@@ -565,7 +568,7 @@ export default function CheckoutPage() {
               <Card className="space-y-6 p-6">
                 <div>
                   <Eyebrow>Step 01 · Fulfilment Mode</Eyebrow>
-                  <h2 className="mt-2 font-display text-lg uppercase tracking-wide text-white">
+                  <h2 className="mt-2 font-display text-lg uppercase text-white">
                     Click & Collect or Discreet Courier
                   </h2>
                 </div>
@@ -577,10 +580,10 @@ export default function CheckoutPage() {
                     onClick={() => setFulfilment('PICKUP')}
                     className="h-14 justify-start gap-3 px-4"
                   >
-                    <Building2 className="size-4 text-gold" />
+                    <Building2 className="size-4 text-foreground" />
                     <div className="text-left">
-                      <div className="text-[0.6875rem]">Click & Collect</div>
-                      <div className="text-[0.5625rem] text-muted-foreground">
+                      <div className="type-ui">Click & Collect</div>
+                      <div className="type-ui text-ash">
                         Sandton Vault Lounge
                       </div>
                     </div>
@@ -598,10 +601,10 @@ export default function CheckoutPage() {
                     }}
                     className="h-14 justify-start gap-3 px-4"
                   >
-                    <Truck className="size-4 text-gold" />
+                    <Truck className="size-4 text-foreground" />
                     <div className="text-left">
-                      <div className="text-[0.6875rem]">Private Courier</div>
-                      <div className="text-[0.5625rem] text-muted-foreground">
+                      <div className="type-ui">Private Courier</div>
+                      <div className="type-ui text-ash">
                         Johannesburg Radius
                       </div>
                     </div>
@@ -612,10 +615,10 @@ export default function CheckoutPage() {
                   <div className="space-y-4 border-t border-[color:var(--border-mono)] pt-5">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-mono text-xs uppercase tracking-[0.18em] text-gold">
+                        <p className="font-mono type-ui text-foreground">
                           {activeBranch?.name ?? 'Sandton Vault & Lounge'}
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 type-ui text-ash">
                           {activeBranch?.address_line ?? '14 Alice Lane, Sandhurst'},{' '}
                           {activeBranch?.city ?? 'Johannesburg'}
                         </p>
@@ -638,10 +641,10 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => setPickupWindow(key)}
                             className={cn(
-                              'border px-3 py-2.5 text-left font-mono text-[0.625rem] uppercase tracking-[0.16em] transition-colors',
+                              'border px-3 py-2.5 text-left font-mono type-ui transition-colors',
                               pickupWindow === key
-                                ? 'border-gold bg-gold/10 text-gold'
-                                : 'border-[color:var(--border-mono)] text-muted-foreground hover:border-gold/40',
+                                ? 'border-foreground bg-transparent text-foreground'
+                                : 'border-[color:var(--border-mono)] text-ash hover:border-ash',
                             )}
                           >
                             {label}
@@ -663,10 +666,10 @@ export default function CheckoutPage() {
                               type="button"
                               onClick={() => selectPreset(preset)}
                               className={cn(
-                                'flex items-center justify-between border px-3 py-2.5 text-left font-mono text-[0.625rem] uppercase tracking-[0.14em] transition-colors',
+                                'flex items-center justify-between border px-3 py-2.5 text-left font-mono type-ui transition-colors',
                                 active
-                                  ? 'border-gold bg-gold/10 text-gold'
-                                  : 'border-[color:var(--border-mono)] text-muted-foreground hover:border-gold/40',
+                                  ? 'border-foreground bg-transparent text-foreground'
+                                  : 'border-[color:var(--border-mono)] text-ash hover:border-ash',
                               )}
                             >
                               <span>{preset.label}</span>
@@ -728,17 +731,17 @@ export default function CheckoutPage() {
 
                     {/* Resolved Zone Banner */}
                     {zoneLoading ? (
-                      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 font-mono type-ui text-ash">
                         <Loader2 className="size-3.5 animate-spin" />
                         Calculating vault distance...
                       </div>
                     ) : zone ? (
-                      <div className="flex flex-wrap items-center justify-between gap-3 border border-emerald-500/40 bg-emerald-500/[0.06] px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border border-foreground bg-transparent/[0.06] px-4 py-3">
                         <div>
-                          <p className="font-mono text-xs uppercase tracking-[0.18em] text-emerald-300">
+                          <p className="font-mono type-ui text-foreground">
                             {zone.zone_name} · {zone.distance_km} km from Sandton Hub
                           </p>
-                          <p className="mt-0.5 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-muted-foreground">
+                          <p className="mt-0.5 font-mono type-ui text-ash">
                             ETA ~{zone.eta_minutes} mins · Min order{' '}
                             {formatCents(zone.min_order_cents)}
                             {zone.free_over_cents
@@ -751,7 +754,7 @@ export default function CheckoutPage() {
                         </Badge>
                       </div>
                     ) : (
-                      <div className="border border-amber-500/50 bg-amber-500/10 px-4 py-3 font-mono text-xs text-amber-300">
+                      <div className="border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
                         Select a preset or enter coordinates within the 25 km Johannesburg radius.
                       </div>
                     )}
@@ -763,7 +766,7 @@ export default function CheckoutPage() {
               <Card className="space-y-6 p-6">
                 <div>
                   <Eyebrow>Step 02 · Settlement & Loyalty</Eyebrow>
-                  <h2 className="mt-2 font-display text-lg uppercase tracking-wide text-white">
+                  <h2 className="mt-2 font-display text-lg uppercase text-white">
                     South African Tender & Points
                   </h2>
                 </div>
@@ -772,10 +775,10 @@ export default function CheckoutPage() {
                   <div className="border border-[color:var(--border-mono)] bg-void/60 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="font-mono text-xs uppercase tracking-[0.18em] text-gold">
+                        <p className="font-mono type-ui text-foreground">
                           Loyalty Balance: {member.points_balance.toLocaleString('en-ZA')} pts
                         </p>
-                        <p className="mt-0.5 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-muted-foreground">
+                        <p className="mt-0.5 font-mono type-ui text-ash">
                           1 pt = {formatCents(rules.point_value_cents)} · Min redeem{' '}
                           {rules.min_redeem_points} pts
                         </p>
@@ -816,22 +819,22 @@ export default function CheckoutPage() {
                         className={cn(
                           'flex w-full items-center justify-between border p-4 text-left transition-colors',
                           active
-                            ? 'border-gold bg-gold/10'
-                            : 'border-[color:var(--border-mono)] hover:border-gold/40',
+                            ? 'border-foreground bg-transparent'
+                            : 'border-[color:var(--border-mono)] hover:border-ash',
                           insufficientCredit && 'cursor-not-allowed opacity-40',
                         )}
                       >
                         <div className="flex items-center gap-3.5">
                           {option.method === 'MEMBER_CREDIT' ? (
-                            <Wallet className="size-4 text-gold" />
+                            <Wallet className="size-4 text-foreground" />
                           ) : (
-                            <CreditCard className="size-4 text-gold" />
+                            <CreditCard className="size-4 text-foreground" />
                           )}
                           <div>
-                            <p className="font-mono text-xs uppercase tracking-[0.18em] text-white">
+                            <p className="font-mono type-ui text-white">
                               {option.label}
                             </p>
-                            <p className="mt-0.5 font-mono text-[0.625rem] uppercase tracking-[0.14em] text-muted-foreground">
+                            <p className="mt-0.5 font-mono type-ui text-ash">
                               {option.sub}
                               {option.method === 'MEMBER_CREDIT' && member
                                 ? ` · Balance: ${formatCents(member.credit_balance_cents)}`
@@ -842,7 +845,7 @@ export default function CheckoutPage() {
                         <span
                           className={cn(
                             'size-3 border',
-                            active ? 'border-gold bg-gold' : 'border-[color:var(--border-mono)]',
+                            active ? 'border-foreground bg-transparent' : 'border-[color:var(--border-mono)]',
                           )}
                         />
                       </button>
@@ -867,10 +870,10 @@ export default function CheckoutPage() {
                       key={uom}
                       className="flex flex-col items-center border-r border-[color:var(--border-mono)] py-2.5 last:border-r-0"
                     >
-                      <span className="font-mono text-[0.5rem] uppercase tracking-[0.22em] text-faint">
+                      <span className="font-mono type-ui text-ash">
                         {uom}
                       </span>
-                      <span className="font-mono text-sm tabular-nums text-gold">
+                      <span className="font-mono type-ui tabular-nums text-foreground">
                         {(uomTotals[uom] ?? 0).toFixed(UOM_PRECISION[uom])}
                         {UOM_SYMBOL[uom]}
                       </span>
@@ -882,14 +885,14 @@ export default function CheckoutPage() {
                   {lines.map((line) => (
                     <li key={line.key} className="flex items-start justify-between gap-3 py-3">
                       <div>
-                        <p className="font-display text-xs uppercase tracking-wide text-white">
+                        <p className="font-display text-xs uppercase text-white">
                           {line.quantity}× {line.productName}
                         </p>
-                        <p className="font-mono text-[0.625rem] uppercase tracking-[0.16em] text-muted-foreground">
+                        <p className="font-mono type-ui text-ash">
                           {line.variantLabel} · {formatBaseQty(cartLineBaseQty(line), line.baseUom)}
                         </p>
                       </div>
-                      <span className="font-mono text-xs tabular-nums text-white">
+                      <span className="font-mono type-ui tabular-nums text-white">
                         {formatCents(cartLineTotalCents(line))}
                       </span>
                     </li>
@@ -898,24 +901,24 @@ export default function CheckoutPage() {
 
                 <Separator />
 
-                <dl className="space-y-2 font-mono text-xs">
-                  <div className="flex justify-between text-muted-foreground">
+                <dl className="space-y-2 font-mono type-ui">
+                  <div className="flex justify-between text-ash">
                     <dt>Subtotal (incl. VAT)</dt>
                     <dd className="tabular-nums">{formatCents(subtotalCents)}</dd>
                   </div>
                   {discountCents > 0 ? (
-                    <div className="flex justify-between text-emerald-300">
+                    <div className="flex justify-between text-foreground">
                       <dt>Points Redeemed ({pointsToRedeem} pts)</dt>
                       <dd className="tabular-nums">-{formatCents(discountCents)}</dd>
                     </div>
                   ) : null}
-                  <div className="flex justify-between text-muted-foreground">
+                  <div className="flex justify-between text-ash">
                     <dt>{fulfilment === 'DELIVERY' ? 'Courier Fee' : 'Click & Collect'}</dt>
                     <dd className="tabular-nums">
                       {deliveryFeeCents === 0 ? 'FREE' : formatCents(deliveryFeeCents)}
                     </dd>
                   </div>
-                  <div className="flex justify-between text-[0.6875rem] text-faint">
+                  <div className="flex justify-between type-ui text-ash">
                     <dt>Net ex. VAT / 15% SARS VAT</dt>
                     <dd className="tabular-nums">
                       {formatCents(exVatCents(totalCents))} +{' '}
@@ -923,8 +926,8 @@ export default function CheckoutPage() {
                     </dd>
                   </div>
                   <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-3 text-lg text-white">
-                    <dt className="uppercase tracking-[0.18em]">Total</dt>
-                    <dd className="tabular-nums text-gold">{formatCents(totalCents)}</dd>
+                    <dt className="">Total</dt>
+                    <dd className="tabular-nums text-foreground">{formatCents(totalCents)}</dd>
                   </div>
                 </dl>
 
@@ -945,7 +948,7 @@ export default function CheckoutPage() {
                     : `Authorize ${formatCents(totalCents)}`}
                 </Button>
 
-                <p className="text-center font-mono text-[0.5625rem] uppercase leading-relaxed tracking-[0.18em] text-faint">
+                <p className="text-center font-mono type-ui leading-relaxed text-ash">
                   {IS_LOCAL_PREVIEW
                     ? 'FIFO batch deduction & loyalty accrual run against the local engine'
                     : 'Executed atomically via process_cartel_order RPC'}

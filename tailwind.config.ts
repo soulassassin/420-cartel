@@ -6,7 +6,7 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: { DEFAULT: '1rem', md: '2rem', xl: '3rem' },
+      padding: { DEFAULT: '18px', md: '43px' },
       screens: { '2xl': '1440px' },
     },
     extend: {
@@ -16,6 +16,7 @@ const config: Config = {
         elevated: 'var(--bg-elevated)',
         glass: 'var(--bg-glass)',
         faint: 'var(--text-faint)',
+        ash: '#8e8e8e',
         gold: {
           DEFAULT: 'var(--accent-gold)',
           bright: 'var(--accent-gold-bright)',
@@ -31,7 +32,7 @@ const config: Config = {
         primary: { DEFAULT: 'var(--accent-gold)', foreground: 'var(--bg-void)' },
         secondary: { DEFAULT: 'var(--bg-surface)', foreground: 'var(--text-primary)' },
         accent: { DEFAULT: 'var(--accent-gold)', foreground: 'var(--bg-void)' },
-        destructive: { DEFAULT: '#B3261E', foreground: '#FFFFFF' },
+        destructive: { DEFAULT: '#FFFFFF', foreground: '#FFFFFF' },
         border: 'var(--border-subtle)',
         input: 'var(--border-subtle)',
         ring: 'var(--accent-gold)',
@@ -42,33 +43,69 @@ const config: Config = {
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       fontSize: {
-        // Brutalist display scale, clamped for fluid typography.
-        'display-xl': ['clamp(3.5rem, 12vw, 11rem)', { lineHeight: '0.86', letterSpacing: '-0.03em' }],
-        'display-lg': ['clamp(2.75rem, 8vw, 7rem)', { lineHeight: '0.9', letterSpacing: '-0.02em' }],
-        'display-md': ['clamp(2rem, 5vw, 4rem)', { lineHeight: '0.95', letterSpacing: '-0.015em' }],
+        /*
+         * Display scale.
+         *
+         * The reference sets its hero at 153px with line-height 1 and states
+         * it should never fall below 96px, so display-xl floors at 6rem
+         * rather than the 3.5rem it used to — at 3.5rem the whole effect
+         * (type as the only source of depth) simply does not happen.
+         *
+         * line-height 1 throughout, not the 0.86 used before: the reference
+         * is set solid, and negative leading on a condensed face at this size
+         * collides ascenders into the line above.
+         */
+        'display-xl': ['clamp(4rem, 8.5vw, 9.5625rem)', { lineHeight: '1' }],
+        'display-lg': ['clamp(4rem, 8vw, 6rem)', { lineHeight: '1' }],
+        'display-md': ['clamp(2.5rem, 5vw, 4rem)', { lineHeight: '1' }],
+
+        /*
+         * Body scale — a minor second (1.067) off a 25px base, as specified.
+         * Deliberately tight: the contrast in this system comes from the gulf
+         * between body and display, not from steps within body.
+         */
+        'body-sm': ['1.1875rem', { lineHeight: '1.55' }],
+        'body-md': ['1.375rem', { lineHeight: '1.45' }],
+        'body-lg': ['1.5625rem', { lineHeight: '1.4' }],
         eyebrow: ['0.6875rem', { lineHeight: '1.2', letterSpacing: '0.34em' }],
       },
       borderRadius: {
-        // Brutalist luxury: sharp edges, never pills.
+        /*
+         * Every corner is square. The reference is explicit — 0px radius on
+         * everything — and these map through `--radius`, which
+         * `.shell-operational` raises back to 2px for the POS and back office.
+         */
         none: '0',
-        sm: '2px',
-        DEFAULT: '2px',
-        md: '3px',
-        lg: '4px',
+        sm: 'var(--radius)',
+        DEFAULT: 'var(--radius)',
+        md: 'var(--radius)',
+        lg: 'var(--radius)',
+        // xl/2xl/3xl are mapped too because several pages reach past the token
+        // layer for them (agent/page.tsx uses rounded-2xl throughout). Routing
+        // them through --radius squares those off in the editorial shell
+        // without having to touch each file before its redesign lands.
+        xl: 'var(--radius)',
+        '2xl': 'var(--radius)',
+        '3xl': 'var(--radius)',
+        // `full` is deliberately NOT mapped: the reference keeps one circular
+        // element, the logo stamp, and avatars/pills still need a true circle.
+        full: '9999px',
       },
+      /*
+       * Resolved through custom properties rather than hardcoded, so a shell
+       * can switch them off wholesale. In the editorial shell the glow and
+       * the drop shadow are both `none`; `.shell-operational` restores them.
+       */
       boxShadow: {
         'gold-hairline': '0 0 0 1px var(--border-subtle)',
-        'gold-focus': '0 0 0 1px var(--accent-gold), 0 0 24px -4px rgba(212, 175, 55, 0.45)',
-        'gold-glow': '0 0 60px -12px rgba(212, 175, 55, 0.5)',
-        obsidian: '0 32px 80px -24px rgba(0, 0, 0, 0.9)',
+        'gold-focus': '0 0 0 1px var(--accent-gold)',
+        'gold-glow': 'var(--shadow-gold-glow)',
+        obsidian: 'var(--shadow-obsidian)',
       },
       backgroundImage: {
-        'gold-sheen':
-          'linear-gradient(110deg, var(--accent-gold-deep) 0%, var(--accent-gold) 38%, var(--accent-gold-bright) 50%, var(--accent-gold) 62%, var(--accent-gold-deep) 100%)',
-        'vault-radial':
-          'radial-gradient(circle at 50% 45%, rgba(212, 175, 55, 0.16) 0%, rgba(5, 5, 5, 0) 62%)',
-        'surface-fade':
-          'linear-gradient(180deg, rgba(15, 15, 15, 0.9) 0%, rgba(5, 5, 5, 0) 100%)',
+        'gold-sheen': 'var(--gradient-gold-sheen)',
+        'vault-radial': 'var(--gradient-vault-radial)',
+        'surface-fade': 'var(--gradient-surface-fade)',
       },
       transitionTimingFunction: {
         cartel: 'cubic-bezier(0.16, 1, 0.3, 1)',

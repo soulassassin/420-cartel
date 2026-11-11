@@ -6,13 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Badge, Card, EmptyState, Eyebrow, Separator, Stat } from '@/components/ui/surfaces';
 import { formatCents } from '@/lib/money';
 import { RANK_LABEL } from '@/lib/loyalty';
-import { listOrders } from '@/lib/data/source';
+import { useRouter } from 'next/navigation';
+import { IS_LOCAL_PREVIEW, listOrders } from '@/lib/data/source';
+import { createCartelBrowserClient } from '@/lib/supabase/client';
 import { useCartelQuery } from '@/lib/data/useCartelQuery';
 import { useSessionStore } from '@/lib/store/session';
 
 export default function AccountPage() {
   const member = useSessionStore((state) => state.member);
   const ordersQuery = useCartelQuery(() => listOrders(50), []);
+  const router = useRouter();
+
+  const logOut = async () => {
+    if (!IS_LOCAL_PREVIEW) await createCartelBrowserClient().auth.signOut();
+    useSessionStore.getState().signOut();
+    router.replace('/');
+    router.refresh();
+  };
 
   const memberOrders = (ordersQuery.data ?? []).filter(
     (o) => !member || o.member_id === member.id,
@@ -25,7 +35,7 @@ export default function AccountPage() {
           <div>
             <Eyebrow>Private Member File</Eyebrow>
             <h1 className="mt-2 display-md text-white">
-              Account <span className="gold-text">Dossier</span>
+              Account <span className="">Dossier</span>
             </h1>
           </div>
           <div className="flex gap-2">
@@ -38,9 +48,14 @@ export default function AccountPage() {
             <Button variant="gold" size="sm" asChild>
               <Link href="/shop">
                 <ShoppingBag className="size-3.5" />
-                Dispensary
+                Vault
               </Link>
             </Button>
+            {member ? (
+              <Button variant="ghost" size="sm" onClick={() => void logOut()}>
+                Log out
+              </Button>
+            ) : null}
           </div>
         </header>
 
@@ -51,7 +66,7 @@ export default function AccountPage() {
                 <p className="font-display text-2xl uppercase text-white">
                   {member.first_name} {member.last_name}
                 </p>
-                <p className="font-mono text-sm text-gold">{member.member_code}</p>
+                <p className="font-mono type-ui text-foreground">{member.member_code}</p>
               </div>
               <Badge tone="live">
                 <ShieldCheck className="size-3.5" />
@@ -70,12 +85,10 @@ export default function AccountPage() {
           </Card>
         ) : (
           <Card className="flex items-center justify-between p-6">
-            <p className="text-sm text-muted-foreground">
-              No active member session selected. Complete onboarding or open your pass.
-            </p>
+            <p className="type-ui text-ash">Log in to see your profile.</p>
             <Button variant="gold" asChild>
-              <Link href="/pass">
-                Load Member Pass
+              <Link href="/login">
+                Log in
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
@@ -90,7 +103,7 @@ export default function AccountPage() {
               description="Place an allocation in the dispensary or at the Sandton POS terminal to view your history."
             />
           ) : (
-            <div className="divide-y divide-[color:var(--border-mono)] font-mono text-xs">
+            <div className="divide-y divide-[color:var(--border-mono)] font-mono type-ui">
               {memberOrders.map((order) => (
                 <div
                   key={order.id}
@@ -98,14 +111,14 @@ export default function AccountPage() {
                 >
                   <div>
                     <p className="text-white">{order.order_number}</p>
-                    <p className="text-[0.625rem] text-muted-foreground">
+                    <p className="type-ui text-ash">
                       {order.channel} · {order.fulfilment_type} ·{' '}
                       {new Date(order.created_at).toLocaleString('en-ZA')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge tone="gold">{order.status}</Badge>
-                    <span className="text-sm tabular-nums text-gold">
+                    <span className="type-ui tabular-nums text-foreground">
                       {formatCents(order.total_cents)}
                     </span>
                   </div>

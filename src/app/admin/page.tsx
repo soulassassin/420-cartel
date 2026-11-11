@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Boxes, ScanLine, Trophy, Users } from 'lucide-react';
 import { Card, Eyebrow } from '@/components/ui/surfaces';
@@ -41,11 +42,24 @@ export default function AdminHubPage() {
   return (
     <main className="min-h-screen bg-void pb-28 pt-14">
       <div className="container max-w-5xl">
-        <Eyebrow>Back Office Command</Eyebrow>
-        <h1 className="mt-2 display-md text-white">
-          Cartel <span className="gold-text">Operations</span>
-        </h1>
-        <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+        <div className="flex items-center gap-4">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-full border border-foreground/30 bg-black">
+            <Image
+              src="/fourtwentycartel_logo.jpg"
+              alt="420 Cartel Logo"
+              width={48}
+              height={48}
+              className="size-full object-cover"
+            />
+          </div>
+          <div>
+            <Eyebrow>Back Office Command</Eyebrow>
+            <h1 className="mt-1 display-md text-white">
+              Cartel <span className="">Operations</span>
+            </h1>
+          </div>
+        </div>
+        <p className="mt-3 max-w-xl type-ui text-ash">
           Select an operational surface below to manage master batches, member KYC verification,
           loyalty rules, or the floor terminal.
         </p>
@@ -58,17 +72,17 @@ export default function AdminHubPage() {
                 <Card interactive className="flex h-full flex-col justify-between gap-6 p-6">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-gold">{mod.index}</span>
-                      <Icon className="size-5 text-gold" />
+                      <span className="font-mono type-ui text-foreground">{mod.index}</span>
+                      <Icon className="size-5 text-foreground" />
                     </div>
-                    <h2 className="font-display text-xl uppercase tracking-wide text-white group-hover:text-gold">
+                    <h2 className="font-display text-xl uppercase text-white group-hover:text-foreground">
                       {mod.title}
                     </h2>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
+                    <p className="type-ui leading-relaxed text-ash">
                       {mod.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-gold">
+                  <div className="flex items-center gap-2 font-mono type-ui text-foreground">
                     Open Surface
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
                   </div>

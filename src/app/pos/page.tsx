@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import Image from 'next/image';
 import {
   Banknote,
   Check,
@@ -94,9 +95,11 @@ type CategoryFilter = 'ALL' | ProductCategory;
 const CATEGORIES: { key: CategoryFilter; label: string }[] = [
   { key: 'ALL', label: 'All Vault' },
   { key: 'FLOWER', label: 'Flower (g)' },
+  { key: 'VAPE', label: 'Vapes & Carts' },
   { key: 'ELIXIR_OIL', label: 'Elixirs (ml)' },
   { key: 'PRE_ROLL', label: 'Pre-Rolls' },
   { key: 'EDIBLE', label: 'Edibles' },
+  { key: 'ACCESSORY', label: 'Hardware & Gear' },
 ];
 
 export default function PosTerminalPage() {
@@ -392,11 +395,19 @@ export default function PosTerminalPage() {
         {/* Top bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--border-mono)] pb-4 print:hidden">
           <div className="flex items-center gap-3">
-            <ScanLine className="size-5 text-gold" />
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full border border-foreground/30 bg-black">
+              <Image
+                src="/fourtwentycartel_logo.jpg"
+                alt="420 Cartel"
+                width={40}
+                height={40}
+                className="size-full object-cover"
+              />
+            </div>
             <div>
               <Eyebrow>Sandton Vault · Counter Terminal 01</Eyebrow>
-              <h1 className="font-display text-xl uppercase tracking-wide text-white">
-                420 Cartel <span className="gold-text">POS</span>
+              <h1 className="font-display text-xl uppercase text-white">
+                420 Cartel <span className="">POS</span>
               </h1>
             </div>
           </div>
@@ -404,14 +415,14 @@ export default function PosTerminalPage() {
           {/* Member bar */}
           <div className="flex flex-wrap items-center gap-2">
             {selectedMember ? (
-              <div className="flex items-center gap-3 border border-gold/50 bg-gold/10 px-3.5 py-2">
-                <ShieldCheck className="size-4 text-gold" />
+              <div className="flex items-center gap-3 border border-ash bg-transparent px-3.5 py-2">
+                <ShieldCheck className="size-4 text-foreground" />
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-white">
+                  <p className="font-mono type-ui text-white">
                     {selectedMember.first_name} {selectedMember.last_name} ·{' '}
-                    <span className="text-gold">{selectedMember.member_code}</span>
+                    <span className="text-foreground">{selectedMember.member_code}</span>
                   </p>
-                  <p className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-muted-foreground">
+                  <p className="font-mono type-ui text-ash">
                     {selectedMember.status} · Credit:{' '}
                     {formatCents(selectedMember.credit_balance_cents)} ·{' '}
                     {selectedMember.points_balance} pts
@@ -427,25 +438,25 @@ export default function PosTerminalPage() {
                 </Button>
               </div>
             ) : (
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
+              <div className="relative w-full sm:w-auto">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ash" />
                     <Input
                       value={memberSearch}
                       onChange={(e) => void handleMemberSearch(e.target.value)}
                       placeholder="Scan QR / CARTEL-0420 / SA ID..."
-                      className="h-10 w-64 pl-9 font-mono text-xs"
+                      className="h-10 w-full sm:w-64 pl-9 font-mono type-ui"
                     />
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setWalkInOpen(true)}>
+                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => setWalkInOpen(true)}>
                     <UserPlus className="size-3.5" />
                     Walk-In 18+
                   </Button>
                 </div>
 
                 {searchResults.length > 0 ? (
-                  <div className="absolute right-0 top-11 z-30 w-80 border border-[color:var(--border-hard)] bg-surface shadow-obsidian">
+                  <div className="dropdown absolute right-0 top-11 z-30 w-full sm:w-80 max-w-[calc(100vw-2rem)] border border-[color:var(--border-hard)] bg-surface">
                     {searchResults.map((m) => (
                       <button
                         key={m.id}
@@ -455,13 +466,13 @@ export default function PosTerminalPage() {
                           setMemberSearch('');
                           setSearchResults([]);
                         }}
-                        className="flex w-full items-center justify-between border-b border-[color:var(--border-mono)] px-3.5 py-2.5 text-left hover:bg-white/[0.04]"
+                        className="flex w-full items-center justify-between border-b border-[color:var(--border-mono)] px-3.5 py-2.5 text-left bg-transparent"
                       >
                         <div>
-                          <p className="font-mono text-xs text-white">
+                          <p className="font-mono type-ui text-white">
                             {m.first_name} {m.last_name}
                           </p>
-                          <p className="font-mono text-[0.625rem] text-gold">{m.member_code}</p>
+                          <p className="font-mono type-ui text-foreground">{m.member_code}</p>
                         </div>
                         <Badge tone={m.status === 'VIP' ? 'gold' : 'live'}>{m.status}</Badge>
                       </button>
@@ -476,7 +487,7 @@ export default function PosTerminalPage() {
         {/* Quick member pills for instant demo testing */}
         {!selectedMember && (seededMembers.data ?? []).length > 0 ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 print:hidden">
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono type-ui text-ash">
               Quick Scan Member:
             </span>
             {(seededMembers.data ?? []).slice(0, 4).map((m) => (
@@ -484,7 +495,7 @@ export default function PosTerminalPage() {
                 key={m.id}
                 type="button"
                 onClick={() => setSelectedMember(m)}
-                className="flex items-center gap-1.5 border border-[color:var(--border-mono)] bg-surface px-2.5 py-1 font-mono text-[0.625rem] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-gold hover:text-gold"
+                className="flex items-center gap-1.5 border border-[color:var(--border-mono)] bg-surface px-2.5 py-1 font-mono type-ui text-ash transition-colors hover:border-foreground hover:text-foreground"
               >
                 <UserRound className="size-3" />
                 {m.member_code} ({m.first_name})
@@ -496,7 +507,7 @@ export default function PosTerminalPage() {
         {error ? (
           <p
             role="alert"
-            className="mt-4 border border-destructive/60 bg-destructive/10 px-4 py-2.5 font-mono text-xs text-red-300 print:hidden"
+            className="mt-4 border border-foreground bg-transparent px-4 py-2.5 font-mono type-ui text-foreground print:hidden"
           >
             {error}
           </p>
@@ -522,7 +533,7 @@ export default function PosTerminalPage() {
                 value={productQuery}
                 onChange={(e) => setProductQuery(e.target.value)}
                 placeholder="Filter SKU or strain..."
-                className="h-9 w-48 font-mono text-xs"
+                className="h-9 w-full sm:w-48 font-mono type-ui"
               />
             </div>
 
@@ -540,14 +551,27 @@ export default function PosTerminalPage() {
                 return (
                   <Card key={product.id} className="flex flex-col justify-between gap-3 p-4">
                     <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
-                            {product.sku} · {CATEGORY_LABEL[product.category]}
-                          </span>
-                          <h2 className="mt-0.5 font-display text-base uppercase text-white">
-                            {product.name}
-                          </h2>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {product.hero_media_url ? (
+                            <div className="relative size-12 shrink-0 overflow-hidden rounded border border-[color:var(--border-mono)] bg-void">
+                              <Image
+                                src={product.hero_media_url}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                              />
+                            </div>
+                          ) : null}
+                          <div>
+                            <span className="font-mono type-ui text-ash">
+                              {product.sku} · {CATEGORY_LABEL[product.category]}
+                            </span>
+                            <h2 className="mt-0.5 font-display text-base uppercase text-white">
+                              {product.name}
+                            </h2>
+                          </div>
                         </div>
                         <Badge tone={remaining <= stock.low_stock_threshold ? 'warn' : 'gold'}>
                           {remaining.toFixed(UOM_PRECISION[product.base_uom])}{' '}
@@ -566,14 +590,14 @@ export default function PosTerminalPage() {
                             disabled={!canFit}
                             onClick={() => addStandardTier(entry, variant)}
                             className={cn(
-                              'flex items-center justify-between border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-colors hover:border-gold',
+                              'flex items-center justify-between border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-colors hover:border-foreground',
                               !canFit && 'cursor-not-allowed opacity-35',
                             )}
                           >
-                            <span className="text-[0.625rem] uppercase text-white">
+                            <span className="type-ui text-white">
                               {variant.label}
                             </span>
-                            <span className="text-[0.6875rem] tabular-nums text-gold">
+                            <span className="type-ui tabular-nums text-foreground">
                               {formatCents(tierPriceCents(variant, selectedMember))}
                             </span>
                           </button>
@@ -585,7 +609,7 @@ export default function PosTerminalPage() {
                           type="button"
                           disabled={remaining <= 0}
                           onClick={() => setScaleTarget({ entry, customVariant: customTier })}
-                          className="col-span-2 flex items-center justify-center gap-2 border border-dashed border-gold/50 bg-gold/5 px-3 py-2 font-mono text-[0.625rem] uppercase tracking-[0.18em] text-gold transition-colors hover:bg-gold/15"
+                          className="col-span-2 flex items-center justify-center gap-2 border border-dashed border-ash bg-transparent px-3 py-2 font-mono type-ui text-foreground transition-colors hover:bg-transparent"
                         >
                           <Scale className="size-3.5" />
                           Scale Weight / Target Rand ({formatCents(tierPriceCents(customTier, selectedMember))}/
@@ -606,7 +630,7 @@ export default function PosTerminalPage() {
                 <div className="flex items-center justify-between border-b border-[color:var(--border-mono)] pb-3">
                   <div>
                     <Eyebrow>Active Counter Ticket</Eyebrow>
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    <p className="mt-0.5 font-mono type-ui text-ash">
                       {lines.length} {lines.length === 1 ? 'line' : 'lines'} · FIFO Batch Deduction
                     </p>
                   </div>
@@ -632,7 +656,7 @@ export default function PosTerminalPage() {
                           <p className="truncate font-display text-xs uppercase text-white">
                             {line.productName}
                           </p>
-                          <p className="font-mono text-[0.625rem] uppercase tracking-[0.14em] text-gold">
+                          <p className="font-mono type-ui text-foreground">
                             {line.variantLabel} ·{' '}
                             {formatBaseQty(line.baseQtyPerUnit * line.quantity, line.baseUom)}
                           </p>
@@ -650,11 +674,11 @@ export default function PosTerminalPage() {
                                     ),
                               )
                             }
-                            className="flex size-7 items-center justify-center text-muted-foreground hover:text-gold"
+                            className="flex size-7 items-center justify-center text-ash hover:text-foreground"
                           >
                             <Minus className="size-3" />
                           </button>
-                          <span className="w-7 text-center font-mono text-xs tabular-nums text-white">
+                          <span className="w-7 text-center font-mono type-ui tabular-nums text-white">
                             {line.quantity}
                           </span>
                           <button
@@ -666,13 +690,13 @@ export default function PosTerminalPage() {
                                 ),
                               )
                             }
-                            className="flex size-7 items-center justify-center text-muted-foreground hover:text-gold"
+                            className="flex size-7 items-center justify-center text-ash hover:text-foreground"
                           >
                             <Plus className="size-3" />
                           </button>
                         </div>
 
-                        <span className="w-20 text-right font-mono text-xs tabular-nums text-white">
+                        <span className="w-20 text-right font-mono type-ui tabular-nums text-white">
                           {formatCents(line.unitPriceCents * line.quantity)}
                         </span>
 
@@ -681,7 +705,7 @@ export default function PosTerminalPage() {
                           onClick={() =>
                             setLines((curr) => curr.filter((l) => l.key !== line.key))
                           }
-                          className="text-faint hover:text-destructive"
+                          className="text-ash hover:text-foreground"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -701,7 +725,7 @@ export default function PosTerminalPage() {
                       value={discountRand}
                       onChange={(e) => setDiscountRand(e.target.value)}
                       placeholder="0.00"
-                      className="h-9 font-mono text-xs"
+                      className="h-9 font-mono type-ui"
                     />
                   </Field>
                   {tenderMethod === 'CASH' ? (
@@ -713,7 +737,7 @@ export default function PosTerminalPage() {
                         value={cashTenderedRand}
                         onChange={(e) => setCashTenderedRand(e.target.value)}
                         placeholder={(totalCents / 100).toFixed(2)}
-                        className="h-9 font-mono text-xs"
+                        className="h-9 font-mono type-ui"
                       />
                     </Field>
                   ) : null}
@@ -736,10 +760,10 @@ export default function PosTerminalPage() {
                         type="button"
                         onClick={() => setTenderMethod(method)}
                         className={cn(
-                          'flex flex-col items-center gap-1 border py-2 font-mono text-[0.625rem] uppercase tracking-[0.14em]',
+                          'flex flex-col items-center gap-1 border py-2 font-mono type-ui ',
                           tenderMethod === method
-                            ? 'border-gold bg-gold/15 text-gold'
-                            : 'border-[color:var(--border-mono)] text-muted-foreground hover:border-gold/40',
+                            ? 'border-foreground bg-transparent text-foreground'
+                            : 'border-[color:var(--border-mono)] text-ash hover:border-ash',
                         )}
                       >
                         <Icon className="size-3.5" />
@@ -749,30 +773,30 @@ export default function PosTerminalPage() {
                   </div>
                 </div>
 
-                <dl className="space-y-1.5 font-mono text-xs">
-                  <div className="flex justify-between text-muted-foreground">
+                <dl className="space-y-1.5 font-mono type-ui">
+                  <div className="flex justify-between text-ash">
                     <dt>Subtotal</dt>
                     <dd className="tabular-nums">{formatCents(subtotalCents)}</dd>
                   </div>
                   {manualDiscountCents > 0 ? (
-                    <div className="flex justify-between text-emerald-300">
+                    <div className="flex justify-between text-foreground">
                       <dt>Discount</dt>
                       <dd className="tabular-nums">-{formatCents(manualDiscountCents)}</dd>
                     </div>
                   ) : null}
-                  <div className="flex justify-between text-faint">
+                  <div className="flex justify-between text-ash">
                     <dt>15% VAT Included</dt>
                     <dd className="tabular-nums">{formatCents(vatPortionCents(totalCents))}</dd>
                   </div>
                   {tenderMethod === 'CASH' && changeCents > 0 ? (
-                    <div className="flex justify-between text-amber-300">
+                    <div className="flex justify-between text-foreground">
                       <dt>Change Due</dt>
                       <dd className="tabular-nums">{formatCents(changeCents)}</dd>
                     </div>
                   ) : null}
                   <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-2.5 text-lg text-white">
-                    <dt className="uppercase tracking-[0.16em]">Total Due</dt>
-                    <dd className="tabular-nums text-gold">{formatCents(totalCents)}</dd>
+                    <dt className="">Total Due</dt>
+                    <dd className="tabular-nums text-foreground">{formatCents(totalCents)}</dd>
                   </div>
                 </dl>
 
@@ -886,15 +910,15 @@ function ScaleModal({
   const computedPrice = customAmountPriceCents(variant, computedQty, member);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-md space-y-5 border-gold p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 ">
+      <Card className="w-full max-w-md space-y-5 border-foreground p-6">
         <div className="flex items-start justify-between">
           <div>
             <Eyebrow>Precision Scale Allocation</Eyebrow>
             <h3 className="mt-1 font-display text-lg uppercase text-white">
               {entry.product.name}
             </h3>
-            <p className="font-mono text-xs text-gold">
+            <p className="font-mono type-ui text-foreground">
               Rate: {formatCents(rateCents)} per {UOM_SYMBOL[uom]}
             </p>
           </div>
@@ -932,7 +956,7 @@ function ScaleModal({
 
         <div className="flex items-center justify-between border border-[color:var(--border-mono)] bg-void p-4 font-mono">
           <div>
-            <span className="text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="type-ui text-ash">
               Scale Deduction
             </span>
             <p className="text-lg text-white">
@@ -940,10 +964,10 @@ function ScaleModal({
             </p>
           </div>
           <div className="text-right">
-            <span className="text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="type-ui text-ash">
               Line Total
             </span>
-            <p className="text-lg text-gold">{formatCents(computedPrice)}</p>
+            <p className="text-lg text-foreground">{formatCents(computedPrice)}</p>
           </div>
         </div>
 
@@ -1019,8 +1043,8 @@ function WalkInModal({
   }, [parsed, firstName, lastName, email, phone, onCreated]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-md space-y-4 border-gold p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80 p-4 ">
+      <Card className="w-full max-w-md space-y-4 border-foreground p-6">
         <div className="flex items-start justify-between">
           <div>
             <Eyebrow>Counter KYC Verification</Eyebrow>
@@ -1034,7 +1058,7 @@ function WalkInModal({
         </div>
 
         {error ? (
-          <p className="border border-destructive/60 bg-destructive/10 px-3 py-2 font-mono text-xs text-red-300">
+          <p className="border border-foreground bg-transparent px-3 py-2 font-mono type-ui text-foreground">
             {error}
           </p>
         ) : null}
@@ -1063,7 +1087,7 @@ function WalkInModal({
             value={saId}
             onChange={(e) => setSaId(e.target.value.replace(/\D/g, '').slice(0, 13))}
             placeholder="9204205123085"
-            className="font-mono tracking-[0.14em]"
+            className="font-mono "
           />
         </Field>
 
@@ -1135,9 +1159,9 @@ function ThermalReceiptModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/85 p-4 backdrop-blur-sm print:bg-transparent print:p-0 print:backdrop-blur-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/85 p-4 print:bg-transparent print:p-0 ">
       <div className="flex flex-col items-center gap-4">
-        <div className="border border-gold shadow-obsidian print:border-0 print:shadow-none">
+        <div className="border border-foreground print:border-0 print:shadow-none">
           <ThermalReceiptPrint
             receipt={receipt}
             branchName={branchName}

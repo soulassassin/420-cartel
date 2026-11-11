@@ -3,37 +3,70 @@
 @tailwind utilities;
 
 /* =====================================================================
-   420 CARTEL :: MONOCHROME & GOLD DESIGN TOKENS
-   The brand is permanently dark. There is no light theme.
+   420 CARTEL :: DESIGN TOKENS
+   Black canvas, white type, one grey. Colour comes only from photography.
+   No gradients, shadows, blur or radius anywhere, on any route.
    ===================================================================== */
 @layer base {
   :root {
-    --font-display: 'Archivo', system-ui, sans-serif;
-    --font-sans: 'Inter', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font-display: 'Anton', 'Arial Narrow', sans-serif;
+    --font-sans: 'Inter', 'Helvetica Neue', Helvetica, sans-serif;
+    /* One UI face. Figures stay aligned through tabular-nums on .font-mono. */
+    --font-mono: var(--font-sans);
 
-    --bg-void: #050505;
-    --bg-surface: #0d0d0d;
-    --bg-elevated: #131313;
-    --bg-glass: rgba(15, 15, 15, 0.78);
+    --bg-void: #000000;
+    --bg-surface: #000000;
+    --bg-elevated: #000000;
+    --bg-glass: #000000;
 
     --text-primary: #ffffff;
-    --text-muted: #8e8e93;
-    --text-faint: #4a4a4f;
+    --text-muted: #8e8e8e;
+    --text-faint: #8e8e8e;
 
-    --accent-gold: #d4af37;
-    --accent-gold-bright: #f3e5ab;
-    --accent-gold-deep: #aa771c;
+    /* Legacy accent names resolve to the monochrome palette. */
+    --accent-gold: #ffffff;
+    --accent-gold-bright: #ffffff;
+    --accent-gold-deep: #8e8e8e;
 
-    --border-subtle: rgba(212, 175, 55, 0.22);
-    --border-hard: rgba(212, 175, 55, 0.55);
-    --border-mono: rgba(255, 255, 255, 0.08);
+    --border-subtle: #8e8e8e;
+    --border-hard: #ffffff;
+    --border-mono: #8e8e8e;
 
-    --radius: 2px;
+    --radius: 0px;
 
-    /* Scroll choreography stage boundaries, shared by GSAP and CSS. */
-    --stage-vault-end: 0.3;
-    --stage-anatomy-end: 0.7;
+    --shadow-gold-glow: none;
+    --shadow-obsidian: none;
+    --gradient-gold-sheen: none;
+    --gradient-vault-radial: none;
+    --gradient-surface-fade: none;
+    --glass-blur: none;
+
+    /* UI type size; dense staff screens override it below. */
+    --text-ui: 19px;
+
+    /* 8pt spacing scale. The landing page uses the matching Tailwind steps
+       (2, 4, 6, 8, 12, 16, 24, 32) and nothing in between. */
+    --space-1: 8px;
+    --space-2: 16px;
+    --space-3: 24px;
+    --space-4: 32px;
+    --space-6: 48px;
+    --space-8: 64px;
+    --space-12: 96px;
+    --space-16: 128px;
+
+    /* Motion. Everything animates transform and opacity only. */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-fast: 200ms;
+    --dur-base: 400ms;
+    --dur-slow: 800ms;
+    --reveal-shift: 24px;
+    --stagger: 120ms;
+  }
+
+  /* Same design, tighter type, so the till and tables hold their data. */
+  .shell-operational {
+    --text-ui: 16px;
   }
 
   * {
@@ -41,27 +74,48 @@
   }
 
   html {
-    /* Lenis drives scrolling; native smooth scroll would fight it. */
     scroll-behavior: auto;
     -webkit-text-size-adjust: 100%;
   }
 
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: clip;
+  }
+
+  .lenis.lenis-smooth iframe {
+    pointer-events: none;
+  }
+
   body {
     @apply bg-void text-foreground font-sans antialiased;
+    font-size: 19px;
+    line-height: 1.25;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
     text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background: var(--accent-gold);
-    color: var(--bg-void);
+    background: #ffffff;
+    color: #000000;
   }
 
-  /* Brutalist gold focus ring, never a browser default outline. */
   :focus-visible {
-    outline: none;
-    box-shadow: var(--tw-shadow-gold-focus, 0 0 0 1px var(--accent-gold));
-    @apply shadow-gold-focus;
+    outline: 1px solid #ffffff;
+    outline-offset: 2px;
   }
 
   input,
@@ -70,75 +124,109 @@
     @apply bg-transparent;
   }
 
-  /* Monospace numerics everywhere a weight, volume or percentage appears. */
+  .font-mono,
   .tabular {
     font-variant-numeric: tabular-nums;
-    @apply font-mono;
   }
 }
 
 @layer components {
-  /* ---- Typography -------------------------------------------------- */
+  .container {
+    max-width: none !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 43px !important;
+      padding-right: 43px !important;
+    }
+  }
+
+  .type-ui {
+    font-size: var(--text-ui);
+    line-height: 1.25;
+  }
+
+  .font-display {
+    font-weight: 400 !important;
+  }
+
   .eyebrow {
-    @apply font-mono text-eyebrow uppercase text-gold;
+    font-size: var(--text-ui);
+    line-height: 1.25;
+    color: var(--text-muted);
+  }
+
+  .display-xl,
+  .display-lg,
+  .display-md {
+    @apply font-display uppercase;
+    font-weight: 400;
+    letter-spacing: 0;
   }
 
   .display-xl {
-    @apply font-display text-display-xl font-black uppercase tracking-tighter;
+    @apply text-display-xl;
   }
 
   .display-lg {
-    @apply font-display text-display-lg font-black uppercase;
+    @apply text-display-lg;
   }
 
   .display-md {
-    @apply font-display text-display-md font-bold uppercase;
+    @apply text-display-md;
   }
 
+  /* Kept so existing markup stays valid; emphasis is now scale, not colour. */
   .gold-text {
-    @apply bg-gold-sheen bg-clip-text text-transparent;
-    background-size: 200% 100%;
+    color: inherit;
   }
 
-  /* ---- Surfaces ---------------------------------------------------- */
   .glass-panel {
-    background: var(--bg-glass);
-    backdrop-filter: blur(16px) saturate(130%);
-    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    background: #000000;
     @apply border border-hairline;
   }
 
   .obsidian-card {
-    @apply border border-hairline bg-surface shadow-obsidian;
+    background: #000000;
+    @apply border border-hairline;
   }
 
-  /* 1px gold hairline that only ignites on hover/active — the core
-     micro-interaction of the whole system. */
+  /* The system's one interaction: a 1px grey rule appears under the link. */
+  .ghost-link {
+    @apply relative inline-block text-foreground no-underline;
+  }
+
+  .ghost-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.15em;
+    height: 1px;
+    background: var(--text-muted);
+    opacity: 0;
+  }
+
+  .ghost-link:hover::after,
+  .ghost-link:focus-visible::after {
+    opacity: 1;
+  }
+
   .hairline-active {
-    @apply border border-[color:var(--border-mono)] transition-all duration-300 ease-cartel;
+    @apply border border-[color:var(--border-mono)];
   }
 
   .hairline-active:hover,
   .hairline-active[data-active='true'] {
-    @apply border-[color:var(--border-hard)] shadow-gold-hairline;
+    @apply border-foreground;
   }
 
-  /* ---- Film grain -------------------------------------------------- */
-  .grain-overlay {
-    position: fixed;
-    inset: -50%;
-    z-index: 60;
-    pointer-events: none;
-    opacity: 0.045;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-    will-change: transform;
-    @apply animate-grain-shift;
-  }
-
-  /* ---- Scrollbar --------------------------------------------------- */
   .cartel-scroll {
     scrollbar-width: thin;
-    scrollbar-color: var(--accent-gold-deep) transparent;
+    scrollbar-color: #8e8e8e transparent;
   }
 
   .cartel-scroll::-webkit-scrollbar {
@@ -147,30 +235,234 @@
   }
 
   .cartel-scroll::-webkit-scrollbar-thumb {
-    background: var(--accent-gold-deep);
+    background: #8e8e8e;
   }
 
   .cartel-scroll::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* Product photo reveal, as on the reference: fades in from black while
+     settling from 110% to 100% inside its frame. */
+  .reveal-img {
+    opacity: 0;
+    transform: scale(1.1);
+    transition:
+      opacity 1200ms ease-out,
+      transform 1600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal-img.is-in {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Blocks fade up once as they enter the viewport. `--reveal-delay` is set
+     per element by <Reveal delay>, which is how card rows stagger. */
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-shift), 0);
+    transition:
+      opacity var(--dur-slow) ease-out var(--reveal-delay, 0ms),
+      transform var(--dur-slow) var(--ease-out) var(--reveal-delay, 0ms);
+  }
+
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Section label above a display title. */
+  .section-label {
+    font-size: 14px;
+    line-height: 16px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Primary and secondary actions. The fill is a pseudo-element that wipes
+     up on hover, so the hover costs one transform and no layout. */
+  .btn {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    height: 56px;
+    padding: 0 32px;
+    overflow: hidden;
+    border: 1px solid #ffffff;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      color var(--dur-base) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .btn-primary {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .btn-primary::before {
+    background: #000000;
+  }
+
+  .btn-secondary {
+    border-color: var(--text-muted);
+    color: #ffffff;
+  }
+
+  .btn-secondary::before {
+    background: #ffffff;
+  }
+
+  .btn-arrow {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Card depth without shadows, which are invisible on black: the card
+     rises and a white rule draws across its top edge. */
+  .lift {
+    position: relative;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .lift::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 1px;
+    background: #ffffff;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  /* Product photo eases in a touch closer when its tile is hovered. */
+  .tile-media {
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  /* The brand mark settles in on load and leans in on hover. */
+  .brand-mark {
+    animation: brand-in 1200ms var(--ease-out) both;
+  }
+
+  .brand-mark-inner {
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  .brand-mark:active .brand-mark-inner {
+    transform: scale(0.98);
+  }
+
+  @keyframes brand-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (hover: hover) {
+    .btn-primary:hover {
+      color: #ffffff;
+    }
+
+    .btn-secondary:hover {
+      color: #000000;
+    }
+
+    .btn:hover::before {
+      transform: scaleY(1);
+    }
+
+    .btn:hover .btn-arrow,
+    .group:hover .btn-arrow {
+      transform: translate3d(8px, 0, 0);
+    }
+
+    .lift:hover {
+      transform: translate3d(0, -8px, 0);
+    }
+
+    .lift:hover::before {
+      transform: scaleX(1);
+    }
+
+    .group:hover .tile-media {
+      transform: scale(1.04);
+    }
+
+    .brand-mark:hover .brand-mark-inner {
+      transform: scale(1.04);
+    }
+  }
+
+  /* Outlined display type: scale without adding a second solid mass. */
+  .display-outline {
+    color: transparent;
+    -webkit-text-stroke: 1px #ffffff;
+  }
+
+  .marquee-track {
+    animation: marquee 48s linear infinite;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Headline fade-in, as on the reference. */
+  .headline-in {
+    animation: headline-in 1200ms var(--ease-out) both;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+
+  @keyframes headline-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, var(--reveal-shift), 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer utilities {
-  /* The persistent R3F canvas sits behind every HTML section. */
-  .canvas-layer {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-  }
-
   .content-layer {
     position: relative;
-    z-index: 10;
-  }
-
-  .edge-fade-b {
-    mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
   }
 }
 
@@ -224,16 +516,8 @@
   #thermal-receipt .no-print {
     display: none !important;
   }
-
-  .grain-overlay,
-  .canvas-layer {
-    display: none !important;
-  }
 }
 
-/* =====================================================================
-   REDUCED MOTION — drop the 3D choreography, keep the content readable
-   ===================================================================== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -241,9 +525,4 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .grain-overlay {
-    display: none;
-  }
-}
+  }}

@@ -80,8 +80,8 @@ export function KycReviewPanel({
     <Card className="flex flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <p className="font-display text-base uppercase tracking-[0.14em]">KYC Review</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-display text-base uppercase ">KYC Review</p>
+          <p className="type-ui text-ash">
             {documents.length} document{documents.length === 1 ? '' : 's'} on file
           </p>
         </div>
@@ -101,17 +101,17 @@ export function KycReviewPanel({
       {/* ---- Documents --------------------------------------------------- */}
       <div className="flex flex-col divide-y divide-[color:var(--border-mono)]">
         {documents.length === 0 ? (
-          <p className="py-4 font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+          <p className="py-4 font-mono type-ui text-ash">
             No documents uploaded yet
           </p>
         ) : (
           documents.map((document) => (
             <div key={document.id} className="flex items-center justify-between gap-4 py-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="truncate font-mono text-xs uppercase tracking-[0.14em]">
+                <span className="truncate font-mono type-ui ">
                   {DOC_LABEL[document.doc_type] ?? document.doc_type}
                 </span>
-                <span className="font-mono text-[0.5625rem] text-faint">
+                <span className="font-mono type-ui text-ash">
                   {document.byte_size
                     ? `${Math.round(document.byte_size / 1024)} KB`
                     : 'size unknown'}{' '}
@@ -156,7 +156,7 @@ export function KycReviewPanel({
 
       {/* ---- Gate explanation -------------------------------------------- */}
       {!agreementSigned ? (
-        <p className="border-l-2 border-amber-500 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+        <p className="border-l-2 border-foreground bg-transparent px-4 py-3 type-ui text-foreground">
           This member has not signed the membership agreement yet. Approval is blocked by the
           database until they do.
         </p>
@@ -165,7 +165,7 @@ export function KycReviewPanel({
       {error ? (
         <p
           role="alert"
-          className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 font-mono text-[0.6875rem] text-red-300"
+          className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
         >
           {error}
         </p>

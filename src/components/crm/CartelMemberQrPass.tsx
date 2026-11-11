@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { Check, Copy, Download, ShieldCheck, ShieldX } from 'lucide-react';
 import { QrCode } from '@/components/ui/QrCode';
 import { Button } from '@/components/ui/button';
@@ -140,14 +141,25 @@ export function CartelMemberQrPass({
 
   return (
     <div className={cn('w-full max-w-sm', className)}>
-      <div className="border-2 border-[#D4AF37] bg-void shadow-obsidian">
+      <div className="border-2 border-foreground bg-void ">
         {/* Gold foil header */}
-        <div className="bg-gold-sheen px-5 py-3.5">
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-sm font-bold uppercase tracking-[0.42em] text-void">
-              420 Cartel
-            </span>
-            <span className="font-mono text-[0.5rem] uppercase tracking-[0.3em] text-void/70">
+        <div className="bg-foreground px-5 py-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="relative size-8 shrink-0 overflow-hidden rounded-full border border-black/30 bg-black">
+                <Image
+                  src="/fourtwentycartel_logo.jpg"
+                  alt="420 Cartel"
+                  width={32}
+                  height={32}
+                  className="size-full object-cover"
+                />
+              </div>
+              <span className="font-mono type-ui font-bold text-black">
+                420 Cartel
+              </span>
+            </div>
+            <span className="font-mono type-ui font-medium text-black/80">
               Member Pass
             </span>
           </div>
@@ -155,13 +167,13 @@ export function CartelMemberQrPass({
 
         <div className="flex flex-col gap-5 p-5">
           <div>
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.34em] text-faint">
+            <p className="font-mono type-ui text-ash">
               Private Botanical Collective
             </p>
-            <p className="mt-2.5 font-display text-2xl font-black uppercase leading-none tracking-tight text-white">
+            <p className="mt-2.5 font-display text-2xl font-black uppercase leading-none text-white">
               {member.first_name} {member.last_name}
             </p>
-            <p className="mt-1.5 font-mono text-lg tracking-[0.2em] text-gold">
+            <p className="mt-1.5 font-mono text-lg text-foreground">
               {member.member_code}
             </p>
           </div>
@@ -192,12 +204,12 @@ export function CartelMemberQrPass({
           {/* QR — encodes the member code the till scanner resolves. */}
           <div className="flex flex-col items-center gap-3 bg-white p-4">
             <QrCode value={member.member_code} size={168} title={`Pass for ${member.member_code}`} />
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.26em] text-[#050505]">
+            <span className="font-mono type-ui text-foreground">
               {member.member_code}
             </span>
           </div>
 
-          <p className="text-center font-mono text-[0.5rem] uppercase leading-relaxed tracking-[0.22em] text-faint">
+          <p className="text-center font-mono type-ui leading-relaxed text-ash">
             Present at the vault · Not transferable · Adults {LEGAL_AGE}+ only
           </p>
         </div>
@@ -208,7 +220,7 @@ export function CartelMemberQrPass({
               variant="ghost"
               size="sm"
               onClick={downloadPass}
-              className="h-12 rounded-none border-r border-[color:var(--border-mono)] hover:text-gold"
+              className="h-12 border-r border-[color:var(--border-mono)] hover:text-foreground"
             >
               <Download className="size-3.5" />
               Download
@@ -217,7 +229,7 @@ export function CartelMemberQrPass({
               variant="ghost"
               size="sm"
               onClick={copyReferral}
-              className="h-12 rounded-none hover:text-gold"
+              className="h-12 hover:text-foreground"
             >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
               {copied ? 'Copied' : 'Referral Link'}
@@ -227,7 +239,7 @@ export function CartelMemberQrPass({
       </div>
 
       {!compact ? (
-        <p className="mt-3 break-all font-mono text-[0.5625rem] leading-relaxed text-faint">
+        <p className="mt-3 break-all font-mono type-ui leading-relaxed text-ash">
           {referralLink}
         </p>
       ) : null}
@@ -238,10 +250,10 @@ export function CartelMemberQrPass({
 function PassStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-mono text-[0.5rem] uppercase tracking-[0.3em] text-faint">
+      <span className="font-mono type-ui text-ash">
         {label}
       </span>
-      <span className="font-mono text-sm uppercase tabular-nums text-white">{value}</span>
+      <span className="font-mono type-ui tabular-nums text-white">{value}</span>
     </div>
   );
 }

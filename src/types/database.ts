@@ -725,6 +725,10 @@ export interface Database {
       sa_id_luhn_valid: { Args: { p_id: string }; Returns: boolean };
       sa_id_to_dob: { Args: { p_id: string }; Returns: string | null };
       is_of_legal_age: { Args: { p_dob: string }; Returns: boolean };
+      /** Counter PIN. Resolves the operator from auth.uid(), never from an argument. */
+      verify_pos_pin: { Args: { p_pin: string }; Returns: boolean };
+      has_pos_pin: { Args: Record<string, never>; Returns: boolean };
+      set_pos_pin: { Args: { p_staff_id: string; p_pin: string }; Returns: undefined };
     };
     Enums: {
       base_uom: BaseUom;

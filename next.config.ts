@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
         ? ([{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/public/**' }] as const)
         : []),
       { protocol: 'https', hostname: 'cdn.higgsfield.ai', pathname: '/**' },
+      { protocol: 'https', hostname: 'storage.googleapis.com', pathname: '/**' },
     ],
   },
   experimental: {

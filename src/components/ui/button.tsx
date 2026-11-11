@@ -6,32 +6,30 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 /**
- * Brutalist luxury button. Sharp corners, wide tracking, and a 1px gold
- * hairline that ignites on hover — never a pill, never a soft shadow.
+ * Every action is a ghost link: white type on black, no fill, with a 1px grey
+ * underline on hover. Variant names are kept so call sites stay unchanged.
  */
+const ghost =
+  'bg-transparent text-foreground underline-offset-4 decoration-1 decoration-ash hover:underline';
+
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-mono text-[0.6875rem] uppercase tracking-[0.22em] transition-all duration-300 ease-cartel disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:shadow-gold-focus [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap type-ui disabled:pointer-events-none disabled:text-ash [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        // The primary call to action: solid gold, black type.
-        gold: 'bg-gold text-void hover:bg-gold-bright active:translate-y-px',
-        // The default: black surface, gold hairline on hover.
-        outline:
-          'border border-[color:var(--border-mono)] bg-transparent text-foreground hover:border-gold hover:text-gold',
-        // Already-active / selected state in a group.
-        active: 'border border-gold bg-gold/10 text-gold shadow-gold-hairline',
-        ghost: 'bg-transparent text-muted-foreground hover:text-gold',
-        surface:
-          'border border-hairline bg-surface text-foreground hover:border-gold hover:bg-elevated',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/85',
+        gold: ghost,
+        outline: ghost,
+        active: `${ghost} underline`,
+        ghost: 'bg-transparent text-ash underline-offset-4 decoration-1 decoration-ash hover:text-foreground hover:underline',
+        surface: ghost,
+        destructive: ghost,
       },
       size: {
-        sm: 'h-9 px-4',
-        default: 'h-11 px-6',
-        lg: 'h-14 px-9 text-[0.75rem] tracking-[0.26em]',
-        // Tablet POS targets: never below 56px of touch area.
-        till: 'h-16 px-5 text-[0.8125rem]',
+        sm: 'h-9 px-0',
+        default: 'h-11 px-0',
+        lg: 'h-14 px-0',
+        // Tablet POS targets keep 64px of touch area and a white hairline.
+        till: 'h-16 border border-foreground px-5',
         icon: 'h-11 w-11 px-0',
       },
       block: { true: 'w-full', false: '' },

@@ -67,8 +67,8 @@ export function KycUploader({
     <Card className="flex flex-col gap-4 p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <p className="font-display text-sm uppercase tracking-[0.14em]">{slot.title}</p>
-          <p className="text-xs leading-relaxed text-muted-foreground">{slot.description}</p>
+          <p className="font-display text-sm uppercase ">{slot.title}</p>
+          <p className="type-ui leading-relaxed text-ash">{slot.description}</p>
         </div>
 
         {approved ? (
@@ -89,7 +89,7 @@ export function KycUploader({
       </div>
 
       {rejected && rejectionReason ? (
-        <p className="border-l-2 border-destructive bg-destructive/5 px-3 py-2 text-xs text-red-300">
+        <p className="border-l-2 border-foreground bg-transparent px-3 py-2 type-ui text-foreground">
           {rejectionReason}
         </p>
       ) : null}
@@ -105,7 +105,7 @@ export function KycUploader({
       />
 
       <div className="flex items-center justify-between gap-3">
-        <p className="truncate font-mono text-[0.625rem] text-faint">
+        <p className="truncate font-mono type-ui text-ash">
           {fileName ?? (status ? 'On file' : 'No file selected')}
         </p>
         <Button
@@ -130,7 +130,7 @@ export function KycUploader({
       </div>
 
       {error ? (
-        <p role="alert" className="font-mono text-[0.6875rem] text-destructive">
+        <p role="alert" className="font-mono type-ui text-foreground">
           {error}
         </p>
       ) : null}

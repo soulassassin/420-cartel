@@ -16,12 +16,11 @@
  * All materials and geometries are created once and disposed on unmount.
  */
 
-import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { Suspense, useLayoutEffect, useMemo, useRef } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   AdaptiveDpr,
   AdaptiveEvents,
-  Environment,
   Float,
   Html,
   MeshTransmissionMaterial,
@@ -29,10 +28,70 @@ import {
   Sparkles,
 } from '@react-three/drei';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 import { CARTEL_COLORS, DPR_RANGE } from '@/lib/brand';
 import { vaultScrollState } from '@/lib/vault-scroll-state';
 import { clamp } from '@/lib/utils';
+
+/**
+ * Ceiling on the per-frame delta fed to every `MathUtils.damp` call below.
+ *
+ * Exponential damping is framerate-independent ONLY if it is handed the real
+ * elapsed time. Clamping exists to stop the scene teleporting after a stall
+ * (a tab switch, a long GC pause), but the clamp has to stay well above a
+ * realistic frame time or it silently becomes a speed limit: at 10fps a 1/30s
+ * cap advances the choreography at a third of wall-clock speed, and on a
+ * machine falling back to a software rasteriser — or in a background tab,
+ * which Chrome pins to 1Hz — the scene crawls so far behind the scroll
+ * position that it reads as "the 3D never animates".
+ *
+ * 1/10s is high enough that anything from 10fps upward tracks the scroll
+ * exactly, and low enough that resuming from a multi-second stall still eases
+ * in over a few frames instead of snapping.
+ */
+const MAX_FRAME_DELTA = 1 / 10;
+
+/* =====================================================================
+   RENDERER CAPABILITY PROBE
+   ===================================================================== */
+
+let cachedLowPower: boolean | null = null;
+
+/**
+ * True when the browser is rasterising WebGL on the CPU instead of a GPU —
+ * Microsoft Basic Render Driver (no GPU driver, or hardware acceleration
+ * switched off in Chrome), SwiftShader, or Mesa's llvmpipe.
+ *
+ * This matters enormously: on a software rasteriser the full scene takes
+ * SECONDS per frame, which is indistinguishable from "the 3D never loaded".
+ * The expensive features below are switched off in that case so the vault
+ * still appears, just with simpler glass and no shadows.
+ */
+function isLowPowerRenderer(): boolean {
+  if (cachedLowPower !== null) return cachedLowPower;
+  if (typeof document === 'undefined') return false;
+
+  try {
+    const probe = document.createElement('canvas');
+    const gl = (probe.getContext('webgl2') ??
+      probe.getContext('webgl')) as WebGLRenderingContext | null;
+    if (!gl) {
+      cachedLowPower = true;
+      return cachedLowPower;
+    }
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = debug
+      ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL))
+      : '';
+    cachedLowPower =
+      /swiftshader|basic render|llvmpipe|software|microsoft basic/i.test(renderer);
+  } catch {
+    cachedLowPower = true;
+  }
+
+  return cachedLowPower ?? false;
+}
 
 /* =====================================================================
    MATERIALS — created once, shared by every mesh, disposed on unmount
@@ -113,15 +172,15 @@ function useCartelMaterials(): CartelMaterials {
     };
   }, []);
 
-  useEffect(
-    () => () => {
-      for (const material of Object.values(materials)) {
-        material.dispose();
-      }
-    },
-    [materials],
-  );
-
+  // NOTE: these are deliberately NOT disposed in an effect cleanup.
+  // `reactStrictMode` is on, so in development React runs every effect
+  // mount -> cleanup -> mount again while REUSING the same `useMemo` value.
+  // An eager cleanup therefore disposes the exact materials the second mount
+  // goes on to render with, forcing three to rebuild every shader program and
+  // re-upload every uniform on the next frame. There is nothing to leak by
+  // leaving them alone either: this canvas is a page-level singleton, and when
+  // it unmounts R3F disposes the renderer, which releases all of their GPU-side
+  // programs and textures anyway. Same reasoning for every shared geometry below.
   return materials;
 }
 
@@ -151,14 +210,6 @@ function VaultDoorAssembly({ materials }: { materials: CartelMaterials }) {
     [],
   );
 
-  useEffect(
-    () => () => {
-      boltGeometry.dispose();
-      spokeGeometry.dispose();
-    },
-    [boltGeometry, spokeGeometry],
-  );
-
   const boltAngles = useMemo(
     () =>
       Array.from(
@@ -178,7 +229,7 @@ function VaultDoorAssembly({ materials }: { materials: CartelMaterials }) {
   );
 
   useFrame((_state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
 
     // The wheel spins three full turns before the bolts release.
     if (wheelRef.current) {
@@ -369,19 +420,32 @@ function buildCalyxCluster(): CalyxNode[] {
 }
 
 function BudCore({ materials }: { materials: CartelMaterials }) {
+  const lowPower = useMemo(isLowPowerRenderer, []);
   const coreRef = useRef<THREE.Group>(null);
   const hudPrimaryRef = useRef<HTMLDivElement>(null);
   const hudSecondaryRef = useRef<HTMLDivElement>(null);
+
+  // drei's <Html> portals into `portal ?? events.connected ?? canvas parent`,
+  // and `events.connected` is whatever the Canvas was given as `eventSource` —
+  // here, document.body. Portaling there would absolutely position the HUDs
+  // against the initial containing block of a 420vh document instead of the
+  // canvas, so they would sit far off-screen and scroll away from the bud they
+  // annotate. Pin them to the canvas' own wrapper, which R3F already styles
+  // `position: relative` at exactly the canvas' size.
+  const canvasWrapper = useThree((state) => state.gl.domElement.parentElement);
+  const hudPortal = useMemo(
+    () => ({ current: canvasWrapper as HTMLElement }),
+    [canvasWrapper],
+  );
 
   const nodes = useMemo(buildCalyxCluster, []);
 
   // One low-poly icosahedron shared by all 42 calyxes — flat-shaded, it reads
   // as a faceted organic bract rather than a sphere.
   const calyxGeometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
-  useEffect(() => () => calyxGeometry.dispose(), [calyxGeometry]);
 
   useFrame((_state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
 
     if (coreRef.current) {
       const target = vaultScrollState.budCoreScale;
@@ -422,7 +486,7 @@ function BudCore({ materials }: { materials: CartelMaterials }) {
 
         {/* Golden trichome dust. */}
         <Sparkles
-          count={70}
+          count={lowPower ? 18 : 70}
           scale={[1.5, 2.3, 1.5]}
           size={2.4}
           speed={0.32}
@@ -432,9 +496,15 @@ function BudCore({ materials }: { materials: CartelMaterials }) {
         />
 
         {/* ---- Floating lab telemetry HUDs --------------------------- */}
+        {/* distanceFactor is a screen-scale multiplier: drei divides it by
+            `2 * tan(fov/2) * distance`, so at the anatomy stage (fov 42, camera
+            ~2.5 units out) a factor of 6 blew these panels up to roughly 3x,
+            swallowing the bud they annotate. ~2.2 renders them at about 1:1,
+            which is the size the 11px mono type was drawn for. */}
         <Html
+          portal={hudPortal}
           position={[1.12, 0.52, 0]}
-          distanceFactor={6}
+          distanceFactor={2.2}
           center
           zIndexRange={[12, 10]}
           wrapperClass="pointer-events-none"
@@ -453,8 +523,9 @@ function BudCore({ materials }: { materials: CartelMaterials }) {
         </Html>
 
         <Html
+          portal={hudPortal}
           position={[-1.18, -0.62, 0.1]}
-          distanceFactor={6}
+          distanceFactor={2.2}
           center
           zIndexRange={[12, 10]}
           wrapperClass="pointer-events-none"
@@ -492,7 +563,7 @@ function TerpeneOrbitRings({ materials }: { materials: CartelMaterials }) {
   );
 
   useFrame((_state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
     const expand = clamp(vaultScrollState.terpeneRingsExpand, 0, 1);
 
     if (groupRef.current) {
@@ -527,12 +598,12 @@ function TerpeneOrbitRings({ materials }: { materials: CartelMaterials }) {
 }
 
 function DeconstructedJarAndBud({ materials }: { materials: CartelMaterials }) {
+  const lowPower = useMemo(isLowPowerRenderer, []);
   const lidRef = useRef<THREE.Group>(null);
   const glassRef = useRef<THREE.Group>(null);
 
   // Knurling: a ring of fine vertical ribs around the lid skirt.
   const knurlGeometry = useMemo(() => new THREE.BoxGeometry(0.018, 0.17, 0.018), []);
-  useEffect(() => () => knurlGeometry.dispose(), [knurlGeometry]);
 
   const knurlAngles = useMemo(
     () => Array.from({ length: 56 }, (_, index) => (index / 56) * Math.PI * 2),
@@ -540,7 +611,7 @@ function DeconstructedJarAndBud({ materials }: { materials: CartelMaterials }) {
   );
 
   useFrame((_state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
 
     // Lid lifts clear of the jar mouth and counter-rotates as it unthreads.
     if (lidRef.current) {
@@ -609,24 +680,39 @@ function DeconstructedJarAndBud({ materials }: { materials: CartelMaterials }) {
       <group ref={glassRef} position={[0, -0.52, 0]}>
         <mesh>
           <cylinderGeometry args={[0.7, 0.7, 1.72, 64, 1, true]} />
-          <MeshTransmissionMaterial
-            transmission={0.82}
-            thickness={0.42}
-            roughness={0.14}
-            ior={1.52}
-            chromaticAberration={0.035}
-            anisotropicBlur={0.3}
-            distortion={0.12}
-            distortionScale={0.25}
-            temporalDistortion={0.04}
-            attenuationDistance={0.6}
-            attenuationColor="#14110A"
-            color="#1C1A14"
-            background={new THREE.Color('#050505')}
-            backside
-            resolution={256}
-            samples={6}
-          />
+          {lowPower ? (
+            /* MeshTransmissionMaterial re-renders the scene into a buffer every
+               frame — far too costly without a GPU. This approximates the same
+               smoked glass with a single cheap transparent pass. */
+            <meshPhysicalMaterial
+              color="#1C1A14"
+              roughness={0.18}
+              metalness={0}
+              transparent
+              opacity={0.42}
+              transmission={0}
+              side={THREE.DoubleSide}
+            />
+          ) : (
+            <MeshTransmissionMaterial
+              transmission={0.82}
+              thickness={0.42}
+              roughness={0.14}
+              ior={1.52}
+              chromaticAberration={0.035}
+              anisotropicBlur={0.3}
+              distortion={0.12}
+              distortionScale={0.25}
+              temporalDistortion={0.04}
+              attenuationDistance={0.6}
+              attenuationColor="#14110A"
+              color="#1C1A14"
+              background={new THREE.Color('#050505')}
+              backside
+              resolution={256}
+              samples={6}
+            />
+          )}
         </mesh>
 
         {/* Glass mouth lip. */}
@@ -656,6 +742,55 @@ function DeconstructedJarAndBud({ materials }: { materials: CartelMaterials }) {
 const CAMERA_Z_NEAR = 2.45;
 const CAMERA_Z_FAR = 8.5;
 
+/**
+ * The environment map, built entirely on the GPU from three's own
+ * RoomEnvironment through PMREMGenerator.
+ *
+ * A material at metalness 1 shows almost nothing but its reflections, so the
+ * gold hardware is invisible without an environment. Two obvious ways to
+ * supply one are both wrong here:
+ *
+ *   - `<Environment preset="…" />` streams an HDRI from a CDN, so the vault
+ *     goes black whenever that fetch is slow, proxied or offline.
+ *   - `<Environment>` with Lightformer children renders them through a
+ *     SEPARATE React root, which under React 19 throws "Attempted to
+ *     synchronously unmount a root while React was already rendering" and
+ *     leaves the env map never generated — black metal again.
+ *
+ * PMREM avoids both: pure three.js, no network, no React reconciler involved.
+ * It runs once on mount and disposes everything it allocated.
+ */
+function StudioEnvironment({ intensity = 1 }: { intensity?: number }) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+
+  useLayoutEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const room = new RoomEnvironment();
+    const target = pmrem.fromScene(room, 0.04);
+
+    scene.environment = target.texture;
+    scene.environmentIntensity = intensity;
+
+    return () => {
+      scene.environment = null;
+      target.dispose();
+      pmrem.dispose();
+      // RoomEnvironment builds real meshes; free them too.
+      room.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose();
+          const material = object.material;
+          if (Array.isArray(material)) material.forEach((m) => m.dispose());
+          else material.dispose();
+        }
+      });
+    };
+  }, [gl, scene, intensity]);
+
+  return null;
+}
+
 function SceneCameraAndLighting() {
   const keyLightRef = useRef<THREE.SpotLight>(null);
   const rimLightRef = useRef<THREE.SpotLight>(null);
@@ -669,7 +804,7 @@ function SceneCameraAndLighting() {
   }, [keyTarget, rimTarget]);
 
   useFrame((state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
     const { camera, pointer } = state;
 
     // Dolly: GSAP writes the target into vaultScrollState; we only damp to it.
@@ -740,13 +875,14 @@ function SceneCameraAndLighting() {
         color={CARTEL_COLORS.goldDeep}
       />
 
-      {/* Isolated in its own boundary on purpose: the preset streams an HDRI
-          from a CDN, and inside the scene's Suspense a slow or blocked fetch
-          would hold back the entire vault. Here it simply arrives late, and
-          the spotlights above carry the scene until it does. */}
-      <Suspense fallback={null}>
-        <Environment preset="city" background={false} environmentIntensity={0.42} />
-      </Suspense>
+      {/* A metal with metalness 1 shows almost nothing but its reflections, so
+          the gold hardware NEEDS an environment to be visible at all. This one
+          is built in-scene from lightformers and rendered to a cube target —
+          no HDRI, no CDN fetch, nothing to fail offline or behind a proxy.
+          It doubles as art direction: a warm gold key, a cold white rim and a
+          low gold bounce, inside a near-black surround that keeps the blacks
+          crushed instead of lifting the whole scene to grey. */}
+      <StudioEnvironment intensity={0.9} />
       <AdaptiveDpr pixelated />
       <AdaptiveEvents />
       <Preload all />
@@ -763,7 +899,7 @@ function VaultScene() {
   const rootRef = useRef<THREE.Group>(null);
 
   useFrame((_state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
+    const dt = Math.min(delta, MAX_FRAME_DELTA);
     if (!rootRef.current) return;
 
     // Phase 3 retires the whole assembly behind the member-gate UI.
@@ -808,11 +944,14 @@ function VaultScene() {
    ===================================================================== */
 
 export function CartelVaultCanvas() {
+  const lowPower = useMemo(isLowPowerRenderer, []);
+
   return (
     <div className="canvas-layer" aria-hidden="true">
       <Canvas
-        // Capped DPR keeps 10-13" POS tablets above 40fps.
-        dpr={DPR_RANGE}
+        // Capped DPR keeps 10-13" POS tablets above 40fps; pinned to 1 with no
+        // GPU, where every extra pixel is rasterised on the CPU.
+        dpr={lowPower ? ([1, 1] as [number, number]) : DPR_RANGE}
         camera={{ position: [0, 0, CAMERA_Z_FAR], fov: 42, near: 0.1, far: 120 }}
         gl={{
           antialias: true,
@@ -821,7 +960,7 @@ export function CartelVaultCanvas() {
           stencil: false,
           depth: true,
         }}
-        shadows="soft"
+        shadows={lowPower ? false : "soft"}
         // The HTML content layer owns all interaction; the canvas never
         // intercepts a click. Pointer coords still arrive for parallax.
         eventSource={typeof document !== 'undefined' ? document.body : undefined}

@@ -1,375 +1,483 @@
-"use client";
+import type { CSSProperties, ReactNode } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { CountUp } from '@/components/home/CountUp';
+import { PlantLoop } from '@/components/home/PlantLoop';
+import { Reveal, RevealImage } from '@/components/ui/RevealImage';
+import { PUBLIC_BRANCHES } from '@/lib/branches';
 
-import React, { useRef } from "react";
-import dynamic from "next/dynamic";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvider";
-import { vaultScrollState } from "@/lib/vault-scroll-state";
-import {
-  ShieldCheck,
-  QrCode,
-  Scale,
-  Droplets,
-  Package,
-  ArrowUpRight,
-  Lock,
-} from "lucide-react";
+/**
+ * 420 CARTEL :: landing page
+ *
+ * The brand mark (in the header) is the focal anchor; the hero sits under it,
+ * centred. Then: marquee, value grid, proof metrics, the product wall, the
+ * range, membership steps, testimonials, service, branches, closing action.
+ *
+ * Spacing is 8pt throughout, using Tailwind steps 2/4/6/8/12/16/24 only.
+ * Every section opens with the same top padding (SECTION) and has no bottom
+ * padding, so the gap between any two sections is one consistent value.
+ *
+ * Type hierarchy: section-label (14px caps, grey) > display title (white) >
+ * body (20px, grey) > action (.btn, or a white ghost link).
+ */
 
-// Dynamically load WebGL Canvas with SSR disabled
-const CartelVaultCanvas = dynamic(
-  () => import("@/components/three/CartelVaultCanvas"),
-  { ssr: false }
-);
+// Listed column by column; alternating shapes keep the columns staggered.
+const TILES = [
+  { name: 'Black Truffle Gold', tagline: 'Indoor-cured. Allocation only.', aspect: 'aspect-[3/4]', slug: 'black-truffle-gold' },
+  { name: 'Jozi Lemon Haze', tagline: 'Citrus-forward daylight sativa.', aspect: 'aspect-square', slug: 'jozi-lemon-haze' },
+  { name: 'Gold Standard CBD Elixir', tagline: 'Broad-spectrum CBD.', aspect: 'aspect-square', slug: 'gold-standard-cbd-elixir' },
+  { name: 'Obsidian Rosin Dropper', tagline: 'Solventless live rosin in MCT.', aspect: 'aspect-[3/4]', slug: 'obsidian-rosin-dropper' },
+  { name: 'Imperial Hash Hole', tagline: '2g donut-rolled, hash-cored.', aspect: 'aspect-[3/4]', slug: 'imperial-hash-hole' },
+  { name: '24K Gold Dust Truffles', tagline: '10mg per truffle.', aspect: 'aspect-square', slug: '24k-gold-dust-truffles' },
+];
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+const RANGE = [
+  { title: 'Flower', detail: 'Small-batch indoor craft flower.', sizes: '1g · 3.5g · 7g · 28g', slug: 'jozi-lemon-haze' },
+  { title: 'Elixirs', detail: 'Solventless rosin and broad-spectrum CBD, dosed by the millilitre.', sizes: '5ml · 10ml · 30ml', slug: 'obsidian-rosin-dropper' },
+  { title: 'Pre-rolls', detail: 'Hand-rolled and hash-cored, finished with a glass tip.', sizes: 'Singles and packs', slug: 'imperial-hash-hole' },
+  { title: 'Edibles', detail: 'Dark chocolate truffles, precisely dosed and boxed in sixes.', sizes: '10mg per truffle', slug: '24k-gold-dust-truffles' },
+];
+
+const STEPS = [
+  { title: 'Verify', detail: 'Confirm you are 18 or over with your SA ID or passport.' },
+  { title: 'Sign', detail: 'Sign the membership agreement and add your documents.' },
+  { title: 'Enter', detail: 'Get your QR member pass and walk straight into the Vault.' },
+];
+
+const SERVICE = [
+  { title: 'In-store pick-up', detail: 'Order ahead and collect from your branch.' },
+  { title: 'Local delivery', detail: 'Express delivery for members in range of a branch.' },
+  { title: 'Member pass', detail: 'One QR pass online and at the counter, earning points on every order.' },
+];
+
+const VALUES = [
+  {
+    title: 'Small batch',
+    detail: 'Indoor craft flower and solventless rosin, produced in limited runs and allocated rather than stockpiled.',
+  },
+  {
+    title: 'Private by design',
+    detail: 'A closed collective. Every member is ID-verified as 18 or over and signs the membership agreement before entry.',
+  },
+  {
+    title: 'Three lounges',
+    detail: 'Norwood, Rivonia and Kibler Park. One membership is recognised at every counter and online.',
+  },
+];
+
+// Every figure is derived from site data or the published trading hours.
+const METRICS = [
+  { value: PUBLIC_BRANCHES.length, suffix: '', label: 'Lounges across Johannesburg' },
+  { value: RANGE.length, suffix: '', label: 'Product lines in the range' },
+  { value: 7, suffix: '', label: 'Days a week, 9 am to 8 pm' },
+  { value: 18, suffix: '+', label: 'Verified members only' },
+];
+
+/*
+ * PLACEHOLDER COPY. These quotes are samples that show the layout; they are
+ * not real member reviews. While TESTIMONIALS_ARE_PLACEHOLDER is true the
+ * section renders in development only and is left out of production builds.
+ * Replace the entries with real, consented member quotes, then set it false.
+ */
+const TESTIMONIALS_ARE_PLACEHOLDER = true;
+const TESTIMONIALS = [
+  {
+    quote: 'Sample quote. The flower is consistently the best I have had in Joburg, and the lounge feels like a members club, not a shop.',
+    name: 'Sample member',
+    detail: 'Norwood',
+  },
+  {
+    quote: 'Sample quote. Sign-up took a few minutes and my pass worked at the counter the same day.',
+    name: 'Sample member',
+    detail: 'Rivonia',
+  },
+  {
+    quote: 'Sample quote. Ordering ahead and collecting on the way home has become my routine.',
+    name: 'Sample member',
+    detail: 'Kibler Park',
+  },
+];
+const SHOW_TESTIMONIALS =
+  TESTIMONIALS.length > 0 && (!TESTIMONIALS_ARE_PLACEHOLDER || process.env.NODE_ENV !== 'production');
+
+const MARQUEE = [
+  'Small batch',
+  'Strictly 18+',
+  'Social Lounge',
+  'Craft Flower',
+  'Solventless Rosin',
+  'Elixirs',
+  'Johannesburg',
+  'Norwood',
+  'Rivonia',
+  'Kibler Park',
+  'Members only',
+];
+
+const FOOTER_LINKS = [
+  { label: 'Home', href: '/' },
+  { label: 'About', href: '/about' },
+  { label: 'Membership', href: '/onboarding' },
+  { label: 'Vault', href: '/shop' },
+  { label: 'Contact', href: '/contact' },
+];
+
+function LeafGlyph() {
+  return (
+    <span aria-hidden="true" className="inline-flex items-center align-baseline">
+      <span className="font-sans font-light">(</span>
+      <svg viewBox="0 0 100 100" className="mx-[0.06em] inline-block h-[0.72em] w-[0.72em] fill-current">
+        <path d="M50 4c7 15 10 32 7 49 7-13 18-23 33-29-4 17-14 31-29 41 10-3 21-3 32 1-11 8-24 11-37 8 5 3 9 7 12 12-9 1-17-2-23-8l2 18h-6l2-18c-6 6-14 9-23 8 3-5 7-9 12-12-13 3-26 0-37-8 11-4 22-4 32-1C24 55 14 41 10 24c15 6 26 16 33 29-3-17 0-34 7-49Z" />
+      </svg>
+      <span className="font-sans font-light">)</span>
+    </span>
+  );
 }
 
-export default function CartelLandingPage() {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      // Reset state on mount
-      vaultScrollState.vaultWheelRotation = 0;
-      vaultScrollState.vaultBoltsRetract = 0;
-      vaultScrollState.vaultDoorOpenAngle = 0;
-      vaultScrollState.cameraZ = 8.5;
-      vaultScrollState.cameraY = 0;
-      vaultScrollState.jarLidLift = 0;
-      vaultScrollState.jarGlassDrop = 0;
-      vaultScrollState.budCoreScale = 0.75;
-      vaultScrollState.terpeneRingsExpand = 0;
-      vaultScrollState.hudCalloutOpacity = 0;
-      vaultScrollState.scenePushBack = 0;
-
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: scrollContainerRef.current,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 1.1,
-          onUpdate: (self) => {
-            vaultScrollState.progress = self.progress;
-          },
-        },
-      });
-
-      // Timeline durations are expressed in whole percentage points of the
-      // scroll container, so each phase's position IS its scroll percentage
-      // and the four phases tile 0 -> 100 with no gap or overlap.
-
-      // PHASE 1A (0% -> 14%): Spin Gold Vault Wheel & Retract Locking Bolts
-      tl.to(
-        vaultScrollState,
-        {
-          vaultWheelRotation: Math.PI * 3,
-          vaultBoltsRetract: 1,
-          cameraZ: 7.4,
-          duration: 14,
-          ease: "power2.inOut",
-        },
-        0
-      );
-
-      // PHASE 1B (14% -> 34%): Swing Vault Door Open & Fly Camera Through Threshold
-      tl.to(
-        vaultScrollState,
-        {
-          vaultDoorOpenAngle: Math.PI * 0.64,
-          cameraZ: 2.85,
-          duration: 20,
-          ease: "power3.inOut",
-        },
-        14
-      );
-
-      // PHASE 2 (34% -> 72%): Deconstruct Jar, Expand Flower Core, Show Terpene Rings & HUD
-      tl.to(
-        vaultScrollState,
-        {
-          jarLidLift: 1,
-          jarGlassDrop: 1,
-          budCoreScale: 1.18,
-          terpeneRingsExpand: 1,
-          hudCalloutOpacity: 1,
-          cameraZ: 2.45,
-          duration: 38,
-          ease: "power2.out",
-        },
-        34
-      );
-
-      // PHASE 3 (72% -> 100%): Re-seal HUD & Push 3D Scene Back for Private Club Onboarding UI
-      tl.to(
-        vaultScrollState,
-        {
-          hudCalloutOpacity: 0,
-          terpeneRingsExpand: 0.35,
-          scenePushBack: 1,
-          cameraY: -0.25,
-          duration: 28,
-          ease: "power2.inOut",
-        },
-        72
-      );
-    },
-    { scope: scrollContainerRef }
-  );
-
+/** Arrow that nudges right when its button or `group` parent is hovered. */
+function ArrowGlyph() {
   return (
-    <SmoothScrollProvider>
-      <main className="relative bg-[#050505] text-white selection:bg-[#D4AF37] selection:text-black">
-        {/* Fixed 3D WebGL Layer */}
-        <CartelVaultCanvas />
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 120 60"
+      className="btn-arrow inline-block h-[0.55em] w-[1.1em] fill-none stroke-current"
+      strokeWidth="2"
+    >
+      <path d="M0 30h116M88 2l30 28-30 28" />
+    </svg>
+  );
+}
 
-        {/* Ambient gold haze. Pure CSS by design: the WebGL vault is already
-            the visual centrepiece, so this layer costs no bytes, no decode and
-            no autoplay request — and it still reads behind white typography.
-            `bg-vault-radial` is the shared token in globals.css. */}
-        <div
-          className="pointer-events-none fixed inset-0 z-[1] bg-vault-radial opacity-70 mix-blend-screen animate-pulse-gold [animation-duration:11s]"
-          aria-hidden="true"
-        />
+function Marquee() {
+  // Two identical halves, so the -50% loop point is invisible.
+  const items = [...MARQUEE, ...MARQUEE];
+  return (
+    <div aria-hidden="true" className="-mx-4 overflow-hidden border-y border-foreground py-4 md:-mx-12">
+      <div className="marquee-track flex w-max">
+        {[...items, ...items].map((item, index) => (
+          <span key={index} className="flex items-center font-display text-[40px] uppercase leading-none">
+            <span className="px-6">{item}</span>
+            <span className="font-sans font-light">*</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-        {/* Fixed Luxury Top Navigation */}
-        <header className="fixed top-0 inset-x-0 z-30 border-b border-[#D4AF37]/20 bg-[#050505]/70 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-3 w-3 rotate-45 bg-[#D4AF37] shadow-[0_0_12px_#D4AF37]" />
-              <span className="font-mono text-sm tracking-[0.35em] uppercase text-white font-semibold">
-                420 CARTEL
-              </span>
-              <span className="hidden sm:inline-block text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 border border-[#D4AF37]/40 text-[#D4AF37]">
-                PRIVATE COLLECTIVE • ZA
-              </span>
-            </div>
+type Tile = (typeof TILES)[number];
 
-            <nav className="flex items-center gap-6 text-xs font-mono tracking-[0.2em] uppercase">
-              <a
-                href="#vault"
-                className="text-neutral-400 hover:text-[#D4AF37] transition"
-              >
-                01. Vault
-              </a>
-              <a
-                href="#anatomy"
-                className="text-neutral-400 hover:text-[#D4AF37] transition"
-              >
-                02. Craft
-              </a>
-              <a
-                href="#collective"
-                className="px-4 py-2 bg-[#D4AF37] text-black font-semibold hover:bg-[#F3E5AB] transition flex items-center gap-1.5"
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                Member Access
-              </a>
-            </nav>
-          </div>
-        </header>
+// Each column starts one step lower than the one before it.
+const COLUMN_OFFSET = ['', 'pt-24', 'pt-48'];
 
-        {/* Scroll-Driven Narrative Container — 3 x 140vh = 420vh exactly, so
-            the GSAP phase positions above map 1:1 onto scroll percentage. */}
-        <div ref={scrollContainerRef} className="relative z-10 min-h-[420vh]">
-          {/* SECTION 1: THE VAULT EXTERIOR (0vh - 140vh) */}
-          <section
-            id="vault"
-            className="min-h-[140vh] flex flex-col justify-between pt-32 pb-20 px-6 max-w-7xl mx-auto pointer-events-none"
-          >
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 border border-[#D4AF37]/40 bg-black/60 backdrop-blur-md mb-6">
-                <Lock className="w-3 h-3 text-[#D4AF37]" />
-                <span className="text-[11px] font-mono tracking-[0.25em] uppercase text-[#F3E5AB]">
-                  SCROLL TO UNSEAL THE RESERVE
-                </span>
-              </div>
-              <h1 className="text-5xl sm:text-7xl font-black tracking-tighter uppercase leading-[0.92]">
-                OBSIDIAN <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#AA771C]">
-                  CRAFT.
-                </span>{" "}
-                <br />
-                PURE GOLD.
-              </h1>
-              <p className="mt-6 text-sm sm:text-base text-neutral-300 font-light max-w-md leading-relaxed">
-                South Africa&apos;s premier private botanical collective.
-                Small-batch indoor flower, solventless extracts, and precision
-                sublingual elixirs curated behind closed vault doors.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between border-t border-white/10 pt-6 text-xs font-mono text-neutral-400">
-              <span>COORDINATES: JOHANNESBURG, ZA</span>
-              <span className="text-[#D4AF37] animate-pulse">
-                [ SCROLL DOWN TO UNLOCK VAULT ↓ ]
-              </span>
-            </div>
-          </section>
-
-          {/* SECTION 2: DECONSTRUCTED ANATOMY & MULTI-UNIT PRECISION (140vh - 280vh) */}
-          <section
-            id="anatomy"
-            className="min-h-[140vh] flex items-center px-6 max-w-7xl mx-auto pointer-events-none"
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
-              <div className="lg:col-span-4 bg-[#0A0A0A]/85 backdrop-blur-xl border border-[#D4AF37]/30 p-7 pointer-events-auto">
-                <div className="text-[11px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase mb-2">
-                  02 // ANATOMY OF THE RESERVE
-                </div>
-                <h2 className="text-3xl font-bold tracking-tight uppercase">
-                  LAB-VERIFIED TO THE MILLIGRAM & MILLILITER.
-                </h2>
-                <p className="mt-4 text-sm text-neutral-300 leading-relaxed">
-                  Every harvest and extraction batch is logged into our unified
-                  vault ledger—allowing seamless weight and volume allocation
-                  across our physical dispensary terminals and private courier
-                  network.
-                </p>
-
-                <div className="mt-6 space-y-3 border-t border-white/10 pt-5 font-mono text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-neutral-300">
-                      <Scale className="w-4 h-4 text-[#D4AF37]" /> Loose Craft
-                      Flower
-                    </span>
-                    <span className="text-[#F3E5AB]">
-                      1g • 3.5g • 7g • 28g
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-neutral-300">
-                      <Droplets className="w-4 h-4 text-[#D4AF37]" /> Elixirs &
-                      Distillates
-                    </span>
-                    <span className="text-[#F3E5AB]">5ml • 10ml • 30ml</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-neutral-300">
-                      <Package className="w-4 h-4 text-[#D4AF37]" /> Hand-Rolled &
-                      Vapes
-                    </span>
-                    <span className="text-[#F3E5AB]">Single & Pack Units</span>
-                  </div>
+/** Staggered product wall built from explicit columns. */
+function TileWall({ columns, className }: { columns: Tile[][]; className: string }) {
+  return (
+    <div className={`flex gap-4 ${className}`}>
+      {columns.map((column, index) => (
+        <div key={index} className={`flex min-w-0 flex-1 flex-col gap-16 ${COLUMN_OFFSET[index] ?? ''}`}>
+          {column.map((tile) => (
+            <Link key={tile.slug} href="/shop" className="group block">
+              <div className={`${tile.aspect} overflow-hidden`}>
+                <div className="tile-media size-full">
+                  <RevealImage src={`/products/${tile.slug}.webp`} alt={tile.name} />
                 </div>
               </div>
-            </div>
-          </section>
-
-          {/* SECTION 3: GATED COLLECTIVE & ONBOARDING PORTAL (280vh - 420vh) */}
-          <section
-            id="collective"
-            className="min-h-[140vh] flex items-center py-24 px-6 max-w-7xl mx-auto"
-          >
-            <div className="w-full bg-[#0A0A0A]/90 backdrop-blur-2xl border border-[#D4AF37]/40 p-8 sm:p-12 shadow-[0_0_80px_rgba(0,0,0,0.95)]">
-              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-white/10 pb-8">
-                <div>
-                  <div className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.25em] text-[#D4AF37] mb-3">
-                    <ShieldCheck className="w-4 h-4" />
-                    18+ PRIVATE GROW CLUB COMPLIANCE GATE
-                  </div>
-                  <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">
-                    ENTER THE CARTEL DISPENSARY
-                  </h2>
-                </div>
-                <p className="text-sm text-neutral-400 max-w-md">
-                  Live batch pricing, Express Local Delivery, and In-Store
-                  Pick-Up are restricted to verified 18+ Cartel Collective
-                  members.
-                </p>
-              </div>
-
-              {/* Preview of Multi-Unit Inventory Architecture */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-10">
-                {[
-                  {
-                    code: "BATCH #GF-01",
-                    title: "BLACK TRUFFLE GOLD",
-                    category: "INDOOR CRAFT FLOWER",
-                    uomBadge: "TRACKED IN GRAMS (g)",
-                    tiers: "1g / 3.5g / 7g / 28g",
-                    potency: "29.4% THC-A",
-                  },
-                  {
-                    code: "BATCH #EL-09",
-                    title: "24K LIQUID ROSIN ELIXIR",
-                    category: "SUBLINGUAL THC EXTRACT",
-                    uomBadge: "TRACKED IN MILLILITERS (ml)",
-                    tiers: "10ml / 30ml Dropper",
-                    potency: "1000mg / 30ml",
-                  },
-                  {
-                    code: "BATCH #PR-04",
-                    title: "CARTEL IMPERIAL BLUNT",
-                    category: "GLASS-TIPPED HASH HOLE",
-                    uomBadge: "TRACKED IN UNITS (EA)",
-                    tiers: "2.0g Flower + 0.5g Rosin",
-                    potency: "44.2% Combined",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.code}
-                    className="group relative border border-white/15 hover:border-[#D4AF37] bg-[#050505] p-6 transition-all duration-300"
-                  >
-                    <div className="flex items-center justify-between text-[10px] font-mono tracking-[0.2em] text-neutral-400">
-                      <span>{item.code}</span>
-                      <span className="text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-0.5">
-                        {item.uomBadge}
-                      </span>
-                    </div>
-                    <div className="mt-4 text-xs font-mono text-neutral-400 uppercase">
-                      {item.category}
-                    </div>
-                    <h3 className="text-xl font-bold text-white mt-1 group-hover:text-[#F3E5AB] transition">
-                      {item.title}
-                    </h3>
-                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono">
-                      <span className="text-neutral-400">{item.tiers}</span>
-                      <span className="text-white">{item.potency}</span>
-                    </div>
-                    <div className="mt-4 bg-white/5 border border-white/10 px-3 py-2 text-[11px] font-mono text-neutral-300 flex items-center justify-between">
-                      <span>MEMBER PRICING LOCKED</span>
-                      <Lock className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Onboarding & POS Member Pass CTA */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-                <div className="flex items-center gap-3 text-xs font-mono text-neutral-300">
-                  <QrCode className="w-8 h-8 text-[#D4AF37] shrink-0" />
-                  <span>
-                    Instant 13-digit SA ID age verification generates your{" "}
-                    <strong className="text-white">
-                      Cartel Black & Gold QR Pass
-                    </strong>{" "}
-                    for online delivery and in-store tablet POS check-in.
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
-                  <a
-                    href="/onboarding"
-                    className="w-full sm:w-auto justify-center px-7 py-4 bg-[#D4AF37] hover:bg-[#F3E5AB] text-black font-mono text-xs font-bold uppercase tracking-[0.2em] transition flex items-center gap-2"
-                  >
-                    Verify 18+ & Join Collective
-                    <ArrowUpRight className="w-4 h-4" />
-                  </a>
-                  <a
-                    href="/pos"
-                    className="w-full sm:w-auto justify-center px-6 py-4 border border-white/25 hover:border-[#D4AF37] text-white font-mono text-xs uppercase tracking-[0.2em] transition"
-                  >
-                    Terminal POS Login
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
+              <p className="mt-4 text-xl">{tile.name}</p>
+              <p className="text-base text-ash">{tile.tagline}</p>
+            </Link>
+          ))}
         </div>
-      </main>
-    </SmoothScrollProvider>
+      ))}
+    </div>
+  );
+}
+
+/** Grey label, then the display title. Opens every section. */
+function SectionHeader({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Reveal>
+      <p className="section-label">{label}</p>
+      <h2 className="display-lg mt-4">{children}</h2>
+    </Reveal>
+  );
+}
+
+// One top padding for every section; the gap between sections is always this.
+const SECTION = 'pt-16 md:pt-24';
+const THREE_UP = 'grid gap-12 md:grid-cols-3 md:gap-4';
+const BODY = 'text-xl text-ash';
+const STAGGER = 120;
+
+const delayStyle = (ms: number) => ({ '--reveal-delay': `${ms}ms` }) as CSSProperties;
+
+export default function LandingPage() {
+  return (
+    <main className="overflow-x-clip bg-void px-4 md:px-12">
+      <div className="relative">
+        <section className="relative isolate flex flex-col items-center pb-16 text-center md:pb-24">
+          {/* The plant stands at the right edge of the hero, behind the copy.
+              The hero contains it, so it stops above the marquee and never
+              crowds the logo above or the blocks below. */}
+          <div aria-hidden="true" className="pointer-events-none absolute -right-4 bottom-0 top-0 -z-10 md:-right-12">
+            <PlantLoop className="h-full w-auto max-w-none opacity-30 lg:opacity-75" />
+          </div>
+          <h1 className="headline-in font-display text-[clamp(2.5rem,5.5vw,5.5rem)] uppercase leading-none">
+            Small <LeafGlyph /> batch
+            <br />
+            flower &amp; rosin
+            <br />
+            members only<span className="font-sans font-light">*</span>
+          </h1>
+          <p className={`headline-in mt-8 max-w-[38rem] ${BODY}`} style={delayStyle(STAGGER)}>
+            A private cannabis collective and social lounge network in Johannesburg. Allocated to verified 18+
+            members for adult private consumption.
+          </p>
+          <div className="headline-in mt-8 flex flex-wrap justify-center gap-4" style={delayStyle(STAGGER * 2)}>
+            <Link href="/onboarding" className="btn btn-primary">
+              Join the Cartel <ArrowGlyph />
+            </Link>
+            <Link href="/shop" className="btn btn-secondary">
+              Enter the Vault
+            </Link>
+          </div>
+        </section>
+
+        <div className="relative z-10">
+          <Marquee />
+        </div>
+      </div>
+
+      {/* Value proposition: three equal cards */}
+      <section className={SECTION}>
+        <SectionHeader label="Why the Cartel">
+          Grown small.
+          <br />
+          Kept private.
+        </SectionHeader>
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          {VALUES.map((value, index) => (
+            <Reveal key={value.title} delay={index * STAGGER} className="h-full">
+              <article className="lift h-full border border-ash p-6 md:p-8">
+                <p className="section-label">0{index + 1}</p>
+                <h3 className="display-md mt-12">{value.title}</h3>
+                <p className={`mt-4 ${BODY}`}>{value.detail}</p>
+              </article>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Proof metrics: each figure counts up once on entry */}
+      <section aria-label="The Cartel in numbers" className={SECTION}>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-12 border-y border-ash py-12 md:grid-cols-4 md:py-16">
+          {METRICS.map((metric, index) => (
+            <Reveal key={metric.label} delay={index * STAGGER} className="flex flex-col-reverse justify-end">
+              <dt className="section-label mt-4">{metric.label}</dt>
+              <dd className="font-display text-[clamp(4rem,9vw,8rem)] leading-none">
+                <CountUp value={metric.value} />
+                {metric.suffix}
+              </dd>
+            </Reveal>
+          ))}
+        </dl>
+      </section>
+
+      <section className={SECTION}>
+        <SectionHeader label="The reserve">On the shelf</SectionHeader>
+        <div className="mt-12">
+          <TileWall columns={[TILES]} className="md:hidden" />
+          <TileWall columns={[TILES.slice(0, 3), TILES.slice(3)]} className="hidden md:flex xl:hidden" />
+          <TileWall columns={[TILES.slice(0, 2), TILES.slice(2, 4), TILES.slice(4)]} className="hidden xl:flex" />
+        </div>
+      </section>
+
+      <section className={`grid gap-12 lg:grid-cols-[1fr_2fr] ${SECTION}`}>
+        <div>
+          <div className="lg:sticky lg:top-12">
+            <SectionHeader label="Four lines">
+              The
+              <br />
+              range
+            </SectionHeader>
+          </div>
+        </div>
+        <ul className="divide-y divide-ash border-y border-ash">
+          {RANGE.map((item, index) => (
+            <li key={item.title}>
+              <Reveal className="grid items-center gap-4 py-8 sm:grid-cols-[1fr_160px]">
+                <div>
+                  <p className="section-label">0{index + 1}</p>
+                  <h3 className="display-md mt-4">{item.title}</h3>
+                  <p className={`mt-4 ${BODY}`}>{item.detail}</p>
+                  <p className="mt-2 text-base">{item.sizes}</p>
+                </div>
+                <div className="aspect-[3/4] w-40 overflow-hidden">
+                  <RevealImage src={`/products/${item.slug}.webp`} alt="" />
+                </div>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={SECTION}>
+        <SectionHeader label="Membership">
+          In <span className="display-outline">three</span> steps
+        </SectionHeader>
+        <div className={`mt-12 ${THREE_UP}`}>
+          {STEPS.map((step, index) => (
+            <Reveal key={step.title} delay={index * STAGGER}>
+              <p className="display-outline font-display text-[clamp(6rem,12vw,11rem)] leading-none">
+                0{index + 1}
+              </p>
+              <h3 className="display-md mt-4">{step.title}</h3>
+              <p className={`mt-4 ${BODY}`}>{step.detail}</p>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal className="mt-12">
+          <Link href="/onboarding" className="btn btn-primary">
+            Become a member <ArrowGlyph />
+          </Link>
+        </Reveal>
+      </section>
+
+      <div className="-mx-4 mt-16 aspect-[16/9] overflow-hidden md:-mx-12 md:mt-24 md:aspect-[21/9]">
+        <RevealImage src="/products/lineup.webp" alt="The 420 Cartel range laid out in a row" />
+      </div>
+
+      {/* Testimonials: one lead quote, two supporting */}
+      {SHOW_TESTIMONIALS && (
+        <section className={SECTION}>
+          <SectionHeader label="From the lounge">Member word</SectionHeader>
+          <div className="mt-12 grid gap-4 lg:grid-cols-[2fr_1fr]">
+            {TESTIMONIALS.slice(0, 1).map((item) => (
+              <Reveal key={item.quote} className="h-full">
+                <figure className="lift flex h-full flex-col justify-between gap-12 border border-ash p-6 md:p-12">
+                  <blockquote className="text-[clamp(1.5rem,3vw,2.75rem)] leading-tight">
+                    &ldquo;{item.quote}&rdquo;
+                  </blockquote>
+                  <figcaption className="section-label">
+                    <span className="text-foreground">{item.name}</span> &middot; {item.detail}
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+            <div className="grid gap-4">
+              {TESTIMONIALS.slice(1, 3).map((item, index) => (
+                <Reveal key={item.quote} delay={(index + 1) * STAGGER} className="h-full">
+                  <figure className="lift flex h-full flex-col justify-between gap-8 border border-ash p-6 md:p-8">
+                    <blockquote className="text-xl">&ldquo;{item.quote}&rdquo;</blockquote>
+                    <figcaption className="section-label">
+                      <span className="text-foreground">{item.name}</span> &middot; {item.detail}
+                    </figcaption>
+                  </figure>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className={SECTION}>
+        <SectionHeader label="Service">How you get it</SectionHeader>
+        <div className={`mt-12 ${THREE_UP}`}>
+          {SERVICE.map((item, index) => (
+            <Reveal key={item.title} delay={index * STAGGER} className="border-t border-ash pt-6">
+              <h3 className="display-md">{item.title}</h3>
+              <p className={`mt-4 ${BODY}`}>{item.detail}</p>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      <section className={SECTION}>
+        <SectionHeader label="Branches">Find us</SectionHeader>
+        <ul className="mt-12 divide-y divide-ash border-y border-ash">
+          {PUBLIC_BRANCHES.map((branch) => (
+            <li key={branch.name}>
+              <Reveal className="grid items-baseline gap-2 py-8 text-xl md:grid-cols-[2fr_2fr_1fr] md:gap-4">
+                <h3 className="display-md">{branch.name}</h3>
+                <p className="text-ash">{branch.address.join(', ')}</p>
+                <p className="md:text-right">{branch.hours}</p>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-8 text-xl">
+          <Link href="/contact" className="ghost-link">
+            All contact details
+          </Link>
+        </p>
+      </section>
+
+      <section className={SECTION}>
+        <Link href="/onboarding" className="group block">
+          <Reveal>
+            <p className="section-label">Verified 18+ members only</p>
+            <p className="display-xl mt-4 decoration-ash decoration-1 underline-offset-[0.12em] group-hover:underline">
+              Join the Cartel <ArrowGlyph />
+            </p>
+          </Reveal>
+        </Link>
+      </section>
+
+      <footer className="overflow-hidden pb-4 pt-16 md:pt-24">
+        <div className="mb-8 flex items-center gap-4">
+          <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-foreground/20">
+            <Image
+              src="/fourtwentycartel_logo.jpg"
+              alt="420 Cartel Official Seal"
+              width={64}
+              height={64}
+              className="size-full object-cover"
+            />
+          </div>
+          <div>
+            <p className="font-display text-xl uppercase tracking-wider text-white">420 Cartel</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-ash">
+              Private Botanical Collective · Est. Johannesburg
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-between gap-x-12 gap-y-4 text-base">
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+            {FOOTER_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="ghost-link">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <a
+              href="https://www.instagram.com/fourtwentycartel/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ghost-link"
+            >
+              Instagram
+            </a>
+            <a
+              href="https://www.facebook.com/p/The-Cartel-420-social-lounge-NO-UNDER-18-100041765415684/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ghost-link"
+            >
+              Facebook
+            </a>
+          </div>
+          <p className="text-ash">
+            Daily 09:00 - 20:00 &middot; Strictly 18+ verified members only. Cannabis for Private Purposes Act compliance. Johannesburg, ZA.
+          </p>
+        </div>
+        <p
+          aria-hidden="true"
+          className="mt-12 whitespace-nowrap font-display text-[20.5vw] uppercase leading-[0.95]"
+        >
+          420 Cartel
+        </p>
+      </footer>
+    </main>
   );
 }

@@ -54,6 +54,9 @@ export const useSessionStore = create<SessionState>()(
 export function isVerifiedMember(member: MemberRow | null): member is MemberRow {
   if (!member) return false;
   if (member.age_verified_at === null) return false;
+  // New applicants get in at sign-up; a rejection records a reason. This
+  // mirrors `is_active_member` in Postgres, which is the real boundary.
+  if (member.status === 'PENDING_KYC') return member.suspended_reason === null;
   return member.status === 'ACTIVE_MEMBER' || member.status === 'VIP';
 }
 

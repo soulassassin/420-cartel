@@ -261,34 +261,34 @@ export default function CartelAgentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#070A08] text-[#F4F0EA] pt-24 pb-20 px-4 sm:px-8">
+    <main className="min-h-screen bg-void text-foreground pt-24 pb-20 px-4 sm:px-8">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header Banner */}
-        <header className="rounded-2xl border border-[#D4AF37]/25 bg-gradient-to-br from-[#0F1712] via-[#090D0A] to-[#070A08] p-6 sm:p-8 shadow-2xl">
+        <header className="border border-ash p-6 sm:p-8 ">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-mono uppercase tracking-widest">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-transparent border border-ash text-foreground type-ui font-mono ">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Surface 09 · Vercel AI SDK ToolLoopAgent</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-serif tracking-tight text-[#F4F0EA]">
+              <h1 className="text-3xl sm:text-4xl font-display uppercase text-foreground">
                 420 Cartel Vault Sommelier &amp; Ops Agent
               </h1>
-              <p className="text-sm text-[#A39E93] max-w-2xl">
-                Powered by <code className="text-[#D4AF37]">ToolLoopAgent</code> +{' '}
-                <code className="text-[#D4AF37]">Vercel AI Gateway</code> with multi-step tool calling
+              <p className="type-ui text-foreground max-w-2xl">
+                Powered by <code className="text-foreground">ToolLoopAgent</code> +{' '}
+                <code className="text-foreground">Vercel AI Gateway</code> with multi-step tool calling
                 for reserve cultivar curation, Sandton 25 km courier quoting, 13-digit SA ID Luhn
                 verification, and Higgsfield Studio prompt engineering.
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/50 border border-white/10 text-xs font-mono">
-                <Cpu className="w-4 h-4 text-[#D4AF37]" />
-                <span className="text-[#A39E93]">Model:</span>
-                <span className="text-[#F4F0EA]">anthropic/claude-sonnet-5.5</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-void border border-ash type-ui font-mono">
+                <Cpu className="w-4 h-4 text-foreground" />
+                <span className="text-foreground">Model:</span>
+                <span className="text-foreground">anthropic/claude-sonnet-5.5</span>
               </div>
-              <span className="text-[11px] font-mono text-emerald-400">
+              <span className="type-ui font-mono text-foreground">
                 ●{' '}
                 {usingLocalPreview
                   ? 'Zero-Config Deterministic Tool Engine Active'
@@ -298,8 +298,8 @@ export default function CartelAgentPage() {
           </div>
 
           {/* Quick Action Chips */}
-          <div className="mt-6 pt-5 border-t border-white/10">
-            <p className="text-[11px] font-mono uppercase tracking-widest text-[#A39E93] mb-3">
+          <div className="mt-6 pt-5 border-t border-ash">
+            <p className="type-ui font-mono text-foreground mb-3">
               Dispatch Live Agent Tool Call:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -311,14 +311,14 @@ export default function CartelAgentPage() {
                     type="button"
                     onClick={() => handleDispatchPrompt(item.prompt)}
                     disabled={isBusy}
-                    className="flex items-start gap-2.5 text-left p-3 rounded-xl bg-white/[0.03] hover:bg-[#D4AF37]/10 border border-white/10 hover:border-[#D4AF37]/40 transition-all group"
+                    className="flex items-start gap-2.5 text-left p-3 bg-transparent hover:bg-transparent border border-ash hover:border-ash transition-all group"
                   >
-                    <Icon className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <Icon className="w-4 h-4 text-foreground shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                     <div>
-                      <div className="text-xs font-medium text-[#F4F0EA] group-hover:text-[#D4AF37]">
+                      <div className="type-ui font-medium text-foreground group-hover:text-foreground">
                         {item.label}
                       </div>
-                      <div className="text-[11px] text-[#A39E93] line-clamp-1 mt-0.5">
+                      <div className="type-ui text-foreground line-clamp-1 mt-0.5">
                         {item.prompt}
                       </div>
                     </div>
@@ -330,13 +330,13 @@ export default function CartelAgentPage() {
         </header>
 
         {/* Agent Conversation & Tool Call Inspector */}
-        <section className="rounded-2xl border border-white/10 bg-[#0B100D]/90 backdrop-blur-xl overflow-hidden shadow-2xl">
-          <div className="px-6 py-3.5 border-b border-white/10 flex items-center justify-between bg-black/40">
-            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#A39E93]">
-              <Terminal className="w-4 h-4 text-[#D4AF37]" />
+        <section className="border border-ash bg-void overflow-hidden ">
+          <div className="px-4 sm:px-6 py-3.5 border-b border-ash flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-void">
+            <div className="flex items-center gap-2 type-ui font-mono text-foreground">
+              <Terminal className="w-4 h-4 text-foreground" />
               <span>Multi-Step Tool Execution Stream</span>
             </div>
-            <div className="flex items-center gap-3 text-[11px] font-mono text-[#A39E93]">
+            <div className="flex items-center gap-3 type-ui font-mono text-foreground">
               <span>stopWhen: isStepCount(6)</span>
               <span>·</span>
               <span>4 Active Tools</span>
@@ -349,27 +349,27 @@ export default function CartelAgentPage() {
               <div key={turn.id} className="space-y-4">
                 {/* User Message */}
                 <div className="flex items-start justify-end gap-3">
-                  <div className="max-w-xl rounded-2xl rounded-tr-sm bg-[#D4AF37]/15 border border-[#D4AF37]/30 px-4 py-3 text-sm text-[#F4F0EA]">
+                  <div className="max-w-xl  bg-transparent border border-ash px-4 py-3 type-ui text-foreground">
                     {turn.userText}
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-[#D4AF37]" />
+                  <div className="w-8 h-8 bg-transparent border border-ash flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-foreground" />
                   </div>
                 </div>
 
                 {/* Assistant + Structured Tool Output */}
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-emerald-400" />
+                  <div className="w-8 h-8 bg-transparent border border-foreground flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-foreground" />
                   </div>
                   <div className="flex-1 space-y-3">
                     {/* Tool Call Card */}
-                    <div className="rounded-xl border border-[#D4AF37]/25 bg-black/60 p-4 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                        <span className="text-[#D4AF37] font-semibold">
+                    <div className="border border-ash bg-void p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 type-ui font-mono">
+                        <span className="text-foreground font-semibold">
                           ⚡ tool-{turn.toolName}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                        <span className="px-2 py-0.5 bg-transparent text-foreground border border-foreground type-ui">
                           output-available
                         </span>
                       </div>
@@ -379,25 +379,25 @@ export default function CartelAgentPage() {
                           {turn.toolOutput.allocations.map((strain) => (
                             <div
                               key={strain.sku}
-                              className="p-3 rounded-lg bg-white/[0.03] border border-white/10 flex flex-col justify-between gap-2"
+                              className="p-3 bg-transparent border border-ash flex flex-col justify-between gap-2"
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <div className="text-sm font-medium text-[#F4F0EA]">
+                                  <div className="type-ui font-medium text-foreground">
                                     {strain.name}
                                   </div>
-                                  <div className="text-[11px] font-mono text-[#A39E93]">
+                                  <div className="type-ui font-mono text-foreground">
                                     {strain.category} · {strain.strain ?? 'RESERVE'} ·{' '}
                                     {strain.thcPct ?? 0}% THC
                                   </div>
                                 </div>
-                                <span className="text-xs font-mono font-semibold text-[#D4AF37]">
+                                <span className="type-ui font-mono font-semibold text-foreground">
                                   {strain.tiers[0]?.memberPrice ?? 'R 450'}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between text-[11px] text-[#A39E93]">
+                              <div className="flex items-center justify-between type-ui text-foreground">
                                 <span>Terpenes: {strain.terpenes.join(' · ')}</span>
-                                <span className="font-mono text-emerald-400">
+                                <span className="font-mono text-foreground">
                                   {strain.vaultAvailable}
                                 </span>
                               </div>
@@ -407,28 +407,28 @@ export default function CartelAgentPage() {
                       )}
 
                       {turn.toolName === 'checkDeliveryRadius' && (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-xs font-mono">
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">SUBURB</div>
-                            <div className="text-[#F4F0EA] mt-0.5">{turn.toolOutput.suburb}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 type-ui font-mono">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">SUBURB</div>
+                            <div className="text-foreground mt-0.5">{turn.toolOutput.suburb}</div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">DISTANCE</div>
-                            <div className="text-[#F4F0EA] mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">DISTANCE</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.distanceKm} km
                             </div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">COURIER FEE</div>
-                            <div className="text-[#D4AF37] mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">COURIER FEE</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.deliverable
                                 ? turn.toolOutput.courierFee
                                 : 'Vault Collect'}
                             </div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">ESTIMATED ETA</div>
-                            <div className="text-emerald-400 mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">ESTIMATED ETA</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.deliverable
                                 ? `${turn.toolOutput.etaMinutes} min`
                                 : 'Click & Collect'}
@@ -438,32 +438,32 @@ export default function CartelAgentPage() {
                       )}
 
                       {turn.toolName === 'verifySaIdEligibility' && (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-xs font-mono">
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">LUHN CHECKSUM</div>
-                            <div className="text-emerald-400 mt-0.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 type-ui font-mono">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">LUHN CHECKSUM</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.valid
                                 ? turn.toolOutput.luhnChecksum
                                 : 'INVALID'}
                             </div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">BIRTH DATE</div>
-                            <div className="text-[#F4F0EA] mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">BIRTH DATE</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.valid ? turn.toolOutput.dateOfBirth : 'N/A'}
                             </div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">MEMBER AGE</div>
-                            <div className="text-[#D4AF37] mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">MEMBER AGE</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.valid
                                 ? `${turn.toolOutput.ageYears} yrs (18+)`
                                 : 'N/A'}
                             </div>
                           </div>
-                          <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/10">
-                            <div className="text-[#A39E93] text-[10px]">CITIZENSHIP</div>
-                            <div className="text-[#F4F0EA] mt-0.5">
+                          <div className="p-2.5 bg-transparent border border-ash">
+                            <div className="text-foreground type-ui">CITIZENSHIP</div>
+                            <div className="text-foreground mt-0.5">
                               {turn.toolOutput.valid ? turn.toolOutput.citizenship : 'N/A'}
                             </div>
                           </div>
@@ -472,17 +472,17 @@ export default function CartelAgentPage() {
 
                       {turn.toolName === 'composeHiggsfieldPrompt' && (
                         <div className="space-y-2 pt-1">
-                          <div className="p-3 rounded-lg bg-black/70 border border-white/10 text-xs font-mono text-[#F4F0EA] leading-relaxed">
+                          <div className="p-3 bg-void border border-ash type-ui font-mono text-foreground leading-relaxed">
                             {turn.toolOutput.prompt}
                           </div>
                           <button
                             type="button"
                             onClick={() => handleCopyText(turn.toolOutput.prompt)}
-                            className="inline-flex items-center gap-1.5 text-xs font-mono text-[#D4AF37] hover:underline"
+                            className="inline-flex items-center gap-1.5 type-ui font-mono text-foreground hover:underline"
                           >
                             {copiedPrompt === turn.toolOutput.prompt ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <Check className="w-3.5 h-3.5 text-foreground" />
                                 <span>Copied Higgsfield Master Prompt</span>
                               </>
                             ) : (
@@ -497,7 +497,7 @@ export default function CartelAgentPage() {
                     </div>
 
                     {/* Assistant Text Summary */}
-                    <div className="rounded-2xl rounded-tl-sm bg-white/[0.04] border border-white/10 px-4 py-3 text-sm text-[#F4F0EA] leading-relaxed">
+                    <div className=" bg-transparent border border-ash px-4 py-3 type-ui text-foreground leading-relaxed">
                       {turn.assistantSummary}
                     </div>
                   </div>
@@ -514,8 +514,8 @@ export default function CartelAgentPage() {
                   }`}
                 >
                   {message.role !== 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                      <Bot className="w-4 h-4 text-emerald-400" />
+                    <div className="w-8 h-8 bg-transparent border border-foreground flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-foreground" />
                     </div>
                   )}
 
@@ -526,10 +526,10 @@ export default function CartelAgentPage() {
                           return (
                             <div
                               key={i}
-                              className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                              className={`px-4 py-3 type-ui leading-relaxed ${
                                 message.role === 'user'
-                                  ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#F4F0EA]'
-                                  : 'bg-white/[0.04] border border-white/10 text-[#F4F0EA]'
+                                  ? 'bg-transparent border border-ash text-foreground'
+                                  : 'bg-transparent border border-ash text-foreground'
                               }`}
                             >
                               {part.text}
@@ -542,14 +542,14 @@ export default function CartelAgentPage() {
                           return (
                             <div
                               key={i}
-                              className="rounded-xl border border-[#D4AF37]/30 bg-black/60 p-3.5 text-xs font-mono space-y-2"
+                              className="border border-ash bg-void p-3.5 type-ui font-mono space-y-2"
                             >
-                              <div className="flex items-center justify-between text-[#D4AF37]">
+                              <div className="flex items-center justify-between text-foreground">
                                 <span>⚡ {part.type}</span>
-                                <span className="text-[10px] text-emerald-400">{part.state}</span>
+                                <span className="type-ui text-foreground">{part.state}</span>
                               </div>
                               {part.state === 'output-available' && (
-                                <pre className="text-[11px] text-[#A39E93] overflow-x-auto whitespace-pre-wrap">
+                                <pre className="type-ui text-foreground overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(part.output, null, 2)}
                                 </pre>
                               )}
@@ -565,7 +565,7 @@ export default function CartelAgentPage() {
             ))}
 
             {error && !usingLocalPreview && (
-              <div className="text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+              <div className="type-ui font-mono text-foreground bg-transparent border border-foreground p-3">
                 Switched to local deterministic tool execution mode ({error.message}).
               </div>
             )}
@@ -577,7 +577,7 @@ export default function CartelAgentPage() {
               e.preventDefault();
               handleDispatchPrompt(input);
             }}
-            className="p-4 border-t border-white/10 bg-black/60 flex items-center gap-3"
+            className="p-4 border-t border-ash bg-void flex items-center gap-3"
           >
             <input
               type="text"
@@ -585,12 +585,12 @@ export default function CartelAgentPage() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isBusy}
               placeholder="Ask the 420 Cartel Vault Agent to filter strains, calculate courier fees, verify an SA ID, or craft a Higgsfield prompt..."
-              className="flex-1 bg-white/[0.04] border border-white/15 focus:border-[#D4AF37] rounded-xl px-4 py-3 text-sm text-[#F4F0EA] placeholder:text-[#A39E93]/60 outline-none transition-colors"
+              className="flex-1 bg-transparent border border-ash focus:border-foreground px-4 py-3 type-ui text-foreground placeholder:text-foreground outline-none transition-colors"
             />
             <button
               type="submit"
               disabled={isBusy || !input.trim()}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#D4AF37] hover:bg-[#e3be42] disabled:opacity-40 text-black font-medium text-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-foreground hover:bg-foreground/90 disabled:opacity-40 text-background font-medium type-ui transition-all"
             >
               <Send className="w-4 h-4" />
               <span>{isBusy ? 'Thinking...' : 'Send'}</span>
@@ -602,33 +602,33 @@ export default function CartelAgentPage() {
         <footer className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             href="/shop"
-            className="p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#D4AF37]/40 flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
           >
             <div>
-              <div className="text-xs font-mono text-[#D4AF37]">03 · PRIVATE DISPENSARY</div>
-              <div className="text-sm text-[#F4F0EA] mt-0.5">Reserve Allocation Catalogue</div>
+              <div className="type-ui font-mono text-foreground">03 · PRIVATE DISPENSARY</div>
+              <div className="type-ui text-foreground mt-0.5">Reserve Allocation Catalogue</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#A39E93] group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
           </Link>
           <Link
             href="/onboarding"
-            className="p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#D4AF37]/40 flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
           >
             <div>
-              <div className="text-xs font-mono text-[#D4AF37]">02 · ONBOARDING &amp; PASS</div>
-              <div className="text-sm text-[#F4F0EA] mt-0.5">Mint QR/NFC Member Pass</div>
+              <div className="type-ui font-mono text-foreground">02 · ONBOARDING &amp; PASS</div>
+              <div className="type-ui text-foreground mt-0.5">Mint QR/NFC Member Pass</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#A39E93] group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
           </Link>
           <Link
             href="/admin/inventory"
-            className="p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#D4AF37]/40 flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
           >
             <div>
-              <div className="text-xs font-mono text-[#D4AF37]">06 · HIGGSFIELD STUDIO</div>
-              <div className="text-sm text-[#F4F0EA] mt-0.5">Generate 9:16 Cultivar Reels</div>
+              <div className="type-ui font-mono text-foreground">06 · HIGGSFIELD STUDIO</div>
+              <div className="type-ui text-foreground mt-0.5">Generate 9:16 Cultivar Reels</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#A39E93] group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
           </Link>
         </footer>
       </div>

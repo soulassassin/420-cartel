@@ -151,21 +151,21 @@ export default function AdminLoyaltyPage() {
         <header>
           <Eyebrow>Back Office · Module H</Eyebrow>
           <h1 className="mt-2 display-md text-white">
-            Loyalty & <span className="gold-text">Affiliates</span>
+            Loyalty & <span className="">Affiliates</span>
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          <p className="mt-2 max-w-2xl type-ui text-ash">
             Configure collective points accrual, rank lifetime-value thresholds, and referral
             commission settlements.
           </p>
         </header>
 
         {notice ? (
-          <p className="mt-6 border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-mono text-xs text-emerald-300">
+          <p className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
             {notice}
           </p>
         ) : null}
         {error ? (
-          <p className="mt-6 border border-destructive/60 bg-destructive/10 px-4 py-3 font-mono text-xs text-red-300">
+          <p className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
             {error}
           </p>
         ) : null}
@@ -180,7 +180,7 @@ export default function AdminLoyaltyPage() {
                   Accrual & Rank Thresholds
                 </h2>
               </div>
-              <Trophy className="size-5 text-gold" />
+              <Trophy className="size-5 text-foreground" />
             </div>
 
             {/*
@@ -189,11 +189,11 @@ export default function AdminLoyaltyPage() {
               hard-coded rule, and `process_cartel_order` reads the saved row
               rather than any constant in the app.
             */}
-            <div className="border border-gold/50 bg-gold/[0.07] px-4 py-3">
-              <p className="font-mono text-[0.5625rem] uppercase tracking-[0.24em] text-gold">
+            <div className="border border-ash bg-transparent/[0.07] px-4 py-3">
+              <p className="font-mono type-ui text-foreground">
                 Rule Parameters Ready for Final Calibration
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 type-ui text-ash">
                 Accrual, point value, rank thresholds, commission and the referral
                 window are all tunable here. Saving re-evaluates member ranks and
                 takes effect on the next order — no deploy, no migration.
@@ -303,8 +303,8 @@ export default function AdminLoyaltyPage() {
                     className="flex flex-wrap items-center justify-between gap-3 py-3"
                   >
                     <div>
-                      <p className="font-mono text-sm text-gold">{code.code}</p>
-                      <p className="font-mono text-xs text-muted-foreground">
+                      <p className="font-mono type-ui text-foreground">{code.code}</p>
+                      <p className="font-mono type-ui text-ash">
                         {code.label ?? 'Member Referral'} · {code.signup_count} signups ·{' '}
                         {code.order_count} orders
                       </p>
@@ -349,11 +349,11 @@ export default function AdminLoyaltyPage() {
                   {(attributionsQuery.data ?? []).map((attr) => (
                     <div
                       key={attr.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-3 font-mono text-xs"
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 font-mono type-ui"
                     >
                       <div>
-                        <p className="text-gold">{formatCents(attr.commission_cents)}</p>
-                        <p className="text-[0.625rem] text-muted-foreground">
+                        <p className="text-foreground">{formatCents(attr.commission_cents)}</p>
+                        <p className="type-ui text-ash">
                           Order {attr.order_id?.slice(0, 8) ?? '—'} ·{' '}
                           {new Date(attr.created_at).toLocaleDateString('en-ZA')}
                         </p>

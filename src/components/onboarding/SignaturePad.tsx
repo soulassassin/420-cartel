@@ -141,14 +141,14 @@ export function SignaturePad({
         {/* Signature baseline. */}
         <div className="pointer-events-none absolute inset-x-6 bottom-10 h-px bg-[color:var(--border-mono)]" />
         {!dataUrl ? (
-          <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center font-mono text-[0.5625rem] uppercase tracking-[0.3em] text-faint">
+          <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center font-mono type-ui text-ash">
             Sign above
           </p>
         ) : null}
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <p className="font-mono text-[0.5625rem] uppercase tracking-[0.22em] text-faint">
+        <p className="font-mono type-ui text-ash">
           {dataUrl ? 'Signature captured' : 'Awaiting signature'}
         </p>
         <Button type="button" variant="ghost" size="sm" onClick={clear} disabled={!dataUrl}>

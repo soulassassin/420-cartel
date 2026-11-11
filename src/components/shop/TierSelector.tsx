@@ -116,7 +116,7 @@ export function TierSelector({
 
   if (variants.length === 0) {
     return (
-      <p className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-faint">
+      <p className="font-mono type-ui text-ash">
         Pricing visible to verified members
       </p>
     );
@@ -140,15 +140,15 @@ export function TierSelector({
               }}
               aria-pressed={active}
               className={cn(
-                'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 transition-all duration-300 ease-cartel',
+                'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 ',
                 active
-                  ? 'border-gold bg-gold/10 text-gold shadow-gold-hairline'
-                  : 'border-[color:var(--border-mono)] text-foreground hover:border-gold/60',
+                  ? 'border-foreground bg-transparent text-foreground '
+                  : 'border-[color:var(--border-mono)] text-foreground hover:border-ash',
                 !fillable && 'cursor-not-allowed opacity-30',
               )}
             >
-              <span className="font-mono text-sm tabular-nums">{variant.label}</span>
-              <span className="font-mono text-[0.5625rem] tabular-nums text-muted-foreground">
+              <span className="font-mono type-ui tabular-nums">{variant.label}</span>
+              <span className="font-mono type-ui tabular-nums text-ash">
                 {formatCents(variant.price_cents)}
               </span>
             </button>
@@ -164,14 +164,14 @@ export function TierSelector({
             }}
             aria-pressed={usingCustom}
             className={cn(
-              'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 transition-all duration-300 ease-cartel',
+              'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 ',
               usingCustom
-                ? 'border-gold bg-gold/10 text-gold shadow-gold-hairline'
-                : 'border-dashed border-[color:var(--border-mono)] text-muted-foreground hover:border-gold/60',
+                ? 'border-foreground bg-transparent text-foreground '
+                : 'border-dashed border-[color:var(--border-mono)] text-ash hover:border-ash',
             )}
           >
-            <span className="font-mono text-sm">Custom</span>
-            <span className="font-mono text-[0.5625rem] text-muted-foreground">
+            <span className="font-mono type-ui">Custom</span>
+            <span className="font-mono type-ui text-ash">
               {UOM_SYMBOL[baseUom]}
             </span>
           </button>
@@ -193,19 +193,19 @@ export function TierSelector({
             aria-invalid={Boolean(customError)}
           />
           <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono type-ui text-ash">
               Min {formatBaseQty(customTier.base_quantity, baseUom)} ·{' '}
               {formatCents(pricePerBaseUnitCents(customTier.price_cents, 1))}/
               {UOM_SYMBOL[baseUom]}
             </span>
             {customValid ? (
-              <span className="font-mono text-xs tabular-nums text-gold">
+              <span className="font-mono type-ui tabular-nums text-foreground">
                 {formatCents(effectivePriceCents)}
               </span>
             ) : null}
           </div>
           {customError ? (
-            <p role="alert" className="font-mono text-[0.625rem] text-destructive">
+            <p role="alert" className="font-mono type-ui text-foreground">
               {customError}
             </p>
           ) : null}
@@ -222,12 +222,12 @@ export function TierSelector({
               Only {formatBaseQty(availableBaseQty, baseUom)} left
             </Badge>
           ) : baseUom !== 'UNITS' && selected ? (
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono type-ui text-ash">
               {tiersAvailable(availableBaseQty, effectiveBaseQty || selected.base_quantity)} ×{' '}
               {usingCustom ? formatBaseQty(effectiveBaseQty, baseUom) : selected.label} available
             </span>
           ) : (
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono type-ui text-ash">
               {formatBaseQty(availableBaseQty, baseUom)} in stock
             </span>
           )}

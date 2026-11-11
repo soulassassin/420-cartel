@@ -30,11 +30,11 @@ export function GlassPanel({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 const BADGE_TONES = {
-  gold: 'border-gold/60 bg-gold/10 text-gold',
-  mono: 'border-[color:var(--border-mono)] bg-white/[0.04] text-muted-foreground',
-  live: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300',
-  warn: 'border-amber-500/50 bg-amber-500/10 text-amber-300',
-  danger: 'border-destructive/60 bg-destructive/10 text-red-300',
+  gold: 'border-foreground text-foreground',
+  mono: 'border-ash text-ash',
+  live: 'border-foreground text-foreground',
+  warn: 'border-foreground text-foreground',
+  danger: 'border-foreground text-foreground',
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONES;
@@ -47,7 +47,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-[0.5625rem] uppercase tracking-[0.2em]',
+        'inline-flex items-center gap-1.5 border px-2 py-1 font-mono type-ui ',
         BADGE_TONES[tone],
         className,
       )}
@@ -72,18 +72,18 @@ export function Stat({
 }) {
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <span className="font-mono text-[0.5625rem] uppercase tracking-[0.26em] text-faint">
+      <span className="font-mono type-ui text-ash">
         {label}
       </span>
       <span
         className={cn(
           'font-mono text-xl tabular-nums leading-none',
-          tone === 'gold' && 'text-gold',
-          tone === 'muted' && 'text-muted-foreground',
+          tone === 'gold' && 'text-foreground',
+          tone === 'muted' && 'text-ash',
         )}
       >
         {value}
-        {unit ? <span className="ml-1 text-xs text-muted-foreground">{unit}</span> : null}
+        {unit ? <span className="ml-1 type-ui text-ash">{unit}</span> : null}
       </span>
     </div>
   );
@@ -118,7 +118,7 @@ export function CaptionRule({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-4">
       <Separator className="flex-1" />
-      <span className="font-mono text-[0.5625rem] uppercase tracking-[0.3em] text-faint">
+      <span className="font-mono type-ui text-ash">
         {children}
       </span>
       <Separator className="flex-1" />
@@ -144,8 +144,8 @@ export function EmptyState({
         className,
       )}
     >
-      <p className="font-display text-lg uppercase tracking-wide">{title}</p>
-      <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="font-display text-lg uppercase ">{title}</p>
+      <p className="max-w-sm type-ui text-ash">{description}</p>
       {action}
     </div>
   );
