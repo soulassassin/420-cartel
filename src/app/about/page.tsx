@@ -24,7 +24,7 @@ const PILLARS = [
 
 export default function AboutPage() {
   return (
-    <main className="bg-void px-[18px] pb-[78px] md:px-[43px]">
+    <main className="bg-void px-4 pb-[78px] md:px-12">
       <section className="grid items-center gap-[27px] py-[78px] lg:grid-cols-[3fr_1fr]">
         <h1 className="display-xl headline-in">
           A private

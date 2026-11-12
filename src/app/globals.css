@@ -10,8 +10,9 @@
    ===================================================================== */
 @layer base {
   :root {
-    --font-display: 'Anton', 'Arial Narrow', sans-serif;
-    --font-sans: 'Inter', 'Helvetica Neue', Helvetica, sans-serif;
+    /* --font-anton / --font-inter are set on <html> by next/font in layout.tsx. */
+    --font-display: var(--font-anton), 'Arial Narrow', sans-serif;
+    --font-sans: var(--font-inter), 'Helvetica Neue', Helvetica, sans-serif;
     /* One UI face. Figures stay aligned through tabular-nums on .font-mono. */
     --font-mono: var(--font-sans);
 
@@ -147,16 +148,18 @@
 }
 
 @layer components {
+  /* One page gutter, shared with the header and the landing page (px-4 / md:px-12),
+     so the logo, nav and every page's content sit on the same left and right edge. */
   .container {
     max-width: none !important;
-    padding-left: 18px !important;
-    padding-right: 18px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
 
   @media (min-width: 768px) {
     .container {
-      padding-left: 43px !important;
-      padding-right: 43px !important;
+      padding-left: 48px !important;
+      padding-right: 48px !important;
     }
   }
 

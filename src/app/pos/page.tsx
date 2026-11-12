@@ -41,6 +41,7 @@ import {
 } from '@/lib/uom';
 import {
   createMember,
+  getPosMemberSnapshot,
   listBranches,
   listCatalogue,
   listCategories,
@@ -57,6 +58,8 @@ import {
   printThermalReceipt,
   type ThermalReceiptTender,
 } from '@/components/pos/ThermalReceiptPrint';
+import { PosMemberCrmPanel } from '@/components/pos/PosMemberCrmPanel';
+import { maxRedeemablePoints, type PosUsualItem } from '@/lib/crm/pos-insights';
 import { RANK_LABEL } from '@/lib/loyalty';
 import { cn } from '@/lib/utils';
 import type {
@@ -149,12 +152,47 @@ export default function PosTerminalPage() {
   const [tenderMethod, setTenderMethod] = useState<PaymentMethod>('CARD_TERMINAL');
   const [cashTenderedRand, setCashTenderedRand] = useState('');
   const [discountRand, setDiscountRand] = useState('');
+  const [pointsInput, setPointsInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ProcessOrderResult | null>(null);
 
   const catalogue = useCartelQuery(() => listCatalogue(branchId), [branchId]);
   const seededMembers = useCartelQuery(() => listMembers(), []);
+
+  // CRM snapshot for the attached member: purchase history, staff notes and
+  // loyalty rules. Drives the counter CRM panel and points redemption.
+  const selectedMemberId = selectedMember?.id ?? null;
+  const memberSnapshot = useCartelQuery(
+    () => (selectedMemberId ? getPosMemberSnapshot(selectedMemberId) : Promise.resolve(null)),
+    [selectedMemberId],
+  );
+  const snapshot =
+    memberSnapshot.data && memberSnapshot.data.member.id === selectedMemberId
+      ? memberSnapshot.data
+      : null;
+
+  // Keep the attached member current: after a sale the snapshot carries the
+  // new points, credit and status, which the ticket and receipt must reflect.
+  useEffect(() => {
+    const fresh = snapshot?.member;
+    if (!fresh) return;
+    setSelectedMember((current) =>
+      current &&
+      current.id === fresh.id &&
+      (current.updated_at !== fresh.updated_at ||
+        current.points_balance !== fresh.points_balance ||
+        current.credit_balance_cents !== fresh.credit_balance_cents ||
+        current.status !== fresh.status)
+        ? fresh
+        : current,
+    );
+  }, [snapshot]);
+
+  // Points belong to one member; a new pass starts with none applied.
+  useEffect(() => {
+    setPointsInput('');
+  }, [selectedMemberId]);
 
   const handleMemberSearch = useCallback(async (query: string) => {
     setMemberSearch(query);
@@ -341,7 +379,25 @@ export default function PosTerminalPage() {
     return Math.min(subtotalCents, Math.round(parsed * 100));
   }, [discountRand, subtotalCents]);
 
-  const totalCents = Math.max(0, subtotalCents - manualDiscountCents);
+  // Loyalty redemption. Mirrors `process_cartel_order`: points are worth
+  // `point_value_cents` each, cannot exceed the balance or the ticket, and a
+  // redemption under the house minimum is not applied at all.
+  const loyaltyRules = snapshot?.loyaltyRules ?? null;
+  const maxPoints =
+    selectedMember && loyaltyRules
+      ? maxRedeemablePoints(selectedMember, loyaltyRules, subtotalCents - manualDiscountCents)
+      : 0;
+  const pointsRedeemed = useMemo(() => {
+    const parsed = Math.floor(Number.parseFloat(pointsInput));
+    if (!loyaltyRules || !Number.isFinite(parsed) || parsed <= 0) return 0;
+    const clamped = Math.min(parsed, maxPoints);
+    return clamped >= Math.max(1, loyaltyRules.min_redeem_points) ? clamped : 0;
+  }, [pointsInput, maxPoints, loyaltyRules]);
+  const pointsDiscountCents = loyaltyRules
+    ? Math.round(pointsRedeemed * loyaltyRules.point_value_cents)
+    : 0;
+
+  const totalCents = Math.max(0, subtotalCents - manualDiscountCents - pointsDiscountCents);
 
   const tenderedCents = useMemo(() => {
     if (tenderMethod !== 'CASH') return totalCents;
@@ -355,6 +411,12 @@ export default function PosTerminalPage() {
   const completeSale = useCallback(async () => {
     if (lines.length === 0) {
       setError('Add at least one item to the ticket.');
+      return;
+    }
+    if (selectedMember?.status === 'SUSPENDED') {
+      setError(
+        `${selectedMember.member_code} is suspended and cannot be served. Detach the member or speak to a manager.`,
+      );
       return;
     }
     if (
@@ -380,6 +442,7 @@ export default function PosTerminalPage() {
           ...(line.isCustomAmount ? { base_qty_override: line.baseQtyPerUnit } : {}),
         })),
         discount_cents: manualDiscountCents,
+        ...(pointsRedeemed > 0 ? { points_redeemed: pointsRedeemed } : {}),
         ignore_reservations: true,
         payments: [
           {
@@ -395,9 +458,11 @@ export default function PosTerminalPage() {
       setReceipt(result);
       setLines([]);
       setDiscountRand('');
+      setPointsInput('');
       setCashTenderedRand('');
       catalogue.refresh();
       seededMembers.refresh();
+      memberSnapshot.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not complete sale.');
     } finally {
@@ -410,10 +475,76 @@ export default function PosTerminalPage() {
     totalCents,
     branchId,
     manualDiscountCents,
+    pointsRedeemed,
     tenderedCents,
     catalogue,
     seededMembers,
+    memberSnapshot,
   ]);
+
+  /**
+   * CRM quick-add: ring one of the member's usual tiers straight onto the
+   * ticket. Returns false when that tier is not on this branch's shelf.
+   */
+  const ringUsualItem = useCallback(
+    (item: PosUsualItem): boolean => {
+      const entry = (catalogue.data ?? []).find((c) => c.product.id === item.productId);
+      const variant = entry?.variants.find((v) => v.id === item.variantId);
+      if (!entry || !variant) return false;
+
+      if (variant.is_custom_amount) {
+        const rounded = roundBaseQty(item.baseQtyPerUnit, entry.product.base_uom);
+        const key = `${variant.id}@${rounded}`;
+        if (lines.some((line) => line.key === key)) {
+          setLines((current) =>
+            current.map((line) =>
+              line.key === key ? { ...line, quantity: line.quantity + 1 } : line,
+            ),
+          );
+        } else {
+          addCustomScaleLine(entry, variant, rounded);
+        }
+      } else {
+        addStandardTier(entry, variant);
+      }
+      return true;
+    },
+    [catalogue.data, lines, addCustomScaleLine, addStandardTier],
+  );
+
+  const handleAddUsual = useCallback(
+    (item: PosUsualItem) => {
+      setError(null);
+      if (!ringUsualItem(item)) {
+        setError(`${item.productName} (${item.variantLabel}) is not on this branch's shelf right now.`);
+      }
+    },
+    [ringUsualItem],
+  );
+
+  const handleRepeatLast = useCallback(
+    (items: PosUsualItem[]) => {
+      setError(null);
+      const catalogueNow = catalogue.data ?? [];
+      const missing: string[] = [];
+      for (const item of items) {
+        const variant = catalogueNow
+          .find((c) => c.product.id === item.productId)
+          ?.variants.find((v) => v.id === item.variantId);
+        if (!variant) {
+          missing.push(item.productName);
+          continue;
+        }
+        // Standard tiers ring once per unit bought; a scale line is one weighed amount.
+        const times = variant.is_custom_amount ? 1 : Math.min(item.quantity, 20);
+        for (let i = 0; i < times; i += 1) ringUsualItem(item);
+      }
+      if (missing.length > 0) {
+        setError(`Not on this branch's shelf right now: ${missing.join(', ')}.`);
+      }
+    },
+    [catalogue.data, ringUsualItem],
+  );
 
   /**
    * Hardware scanner routing.
@@ -711,14 +842,14 @@ export default function PosTerminalPage() {
                             disabled={!canFit}
                             onClick={() => addStandardTier(entry, variant)}
                             className={cn(
-                              'flex items-center justify-between border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-colors hover:border-foreground',
+                              'flex min-h-11 items-center justify-between gap-2 border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-colors hover:border-foreground',
                               !canFit && 'cursor-not-allowed opacity-35',
                             )}
                           >
                             <span className="type-ui text-white">
                               {variant.label}
                             </span>
-                            <span className="type-ui tabular-nums text-foreground">
+                            <span className="type-ui shrink-0 whitespace-nowrap tabular-nums text-foreground">
                               {formatCents(tierPriceCents(variant, selectedMember))}
                             </span>
                           </button>
@@ -745,7 +876,19 @@ export default function PosTerminalPage() {
           </div>
 
           {/* Right 5 cols: Active Ticket & Settlement */}
-          <div className="lg:col-span-5">
+          <div className="space-y-4 lg:col-span-5">
+            {selectedMember ? (
+              <PosMemberCrmPanel
+                member={selectedMember}
+                snapshot={snapshot}
+                loading={memberSnapshot.loading}
+                loadError={memberSnapshot.error}
+                branchId={branchId}
+                onAddUsual={handleAddUsual}
+                onRepeatLast={handleRepeatLast}
+                onChanged={memberSnapshot.refresh}
+              />
+            ) : null}
             <Card className="flex flex-col justify-between p-5">
               <div>
                 <div className="flex items-center justify-between border-b border-[color:var(--border-mono)] pb-3">
@@ -864,6 +1007,40 @@ export default function PosTerminalPage() {
                   ) : null}
                 </div>
 
+                {/* Loyalty redemption: only offered when the member can actually redeem. */}
+                {selectedMember && loyaltyRules && maxPoints > 0 ? (
+                  <Field
+                    label={`Redeem Points (${selectedMember.points_balance} available)`}
+                    htmlFor="pos_points"
+                    hint={
+                      pointsRedeemed > 0
+                        ? `-${formatCents(pointsDiscountCents)}`
+                        : `Min ${loyaltyRules.min_redeem_points} · max ${maxPoints} on this ticket`
+                    }
+                  >
+                    <div className="flex gap-2">
+                      <Input
+                        id="pos_points"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={pointsInput}
+                        onChange={(e) => setPointsInput(e.target.value)}
+                        placeholder="0"
+                        className="h-9 font-mono type-ui"
+                      />
+                      <Button
+                        variant="surface"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => setPointsInput(String(maxPoints))}
+                      >
+                        Use max
+                      </Button>
+                    </div>
+                  </Field>
+                ) : null}
+
                 {/* Tender Method Selector */}
                 <div>
                   <Label>Tender Method</Label>
@@ -903,6 +1080,12 @@ export default function PosTerminalPage() {
                     <div className="flex justify-between text-foreground">
                       <dt>Discount</dt>
                       <dd className="tabular-nums">-{formatCents(manualDiscountCents)}</dd>
+                    </div>
+                  ) : null}
+                  {pointsDiscountCents > 0 ? (
+                    <div className="flex justify-between text-foreground">
+                      <dt>Points Redeemed ({pointsRedeemed})</dt>
+                      <dd className="tabular-nums">-{formatCents(pointsDiscountCents)}</dd>
                     </div>
                   ) : null}
                   <div className="flex justify-between text-ash">

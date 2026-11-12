@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /** True once the element has scrolled into view. Fires a single time. */
@@ -32,12 +33,48 @@ function useInView<T extends Element>() {
   return { ref, inView };
 }
 
+/** Hosts next/image is configured to resize (see `images.remotePatterns`). */
+const OPTIMISABLE_HOST = /^https:\/\/([a-z0-9-]+\.supabase\.co|cdn\.higgsfield\.ai|storage\.googleapis\.com)\//i;
+
 /**
- * Product photo that reveals once as it scrolls into view. The parent must
- * clip it with `overflow-hidden` so the 110% start scale stays inside the tile.
+ * Product photo that reveals once as it scrolls into view. The parent must be
+ * positioned and clip it with `overflow-hidden`, so the image can fill it and
+ * the 110% start scale stays inside the tile.
+ *
+ * It goes through next/image, so the browser gets a file sized for the slot
+ * (`sizes`) in AVIF or WebP rather than the 1200px original, and anything
+ * below the fold is not requested until it is scrolled near. A URL from a host
+ * the optimiser is not configured for falls back to a plain lazy <img>.
  */
-export function RevealImage({ src, alt }: { src: string; alt: string }) {
+export function RevealImage({
+  src,
+  alt,
+  sizes = '(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw',
+  eager = false,
+}: {
+  src: string;
+  alt: string;
+  /** How wide the slot is at each breakpoint; decides which file is fetched. */
+  sizes?: string;
+  /** Load straight away. Only for an image that is on screen at first paint. */
+  eager?: boolean;
+}) {
   const { ref, inView } = useInView<HTMLImageElement>();
+  const className = cn('reveal-img size-full object-cover', inView && 'is-in');
+
+  if (src.startsWith('/') || OPTIMISABLE_HOST.test(src)) {
+    return (
+      <Image
+        ref={ref}
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        loading={eager ? 'eager' : 'lazy'}
+        className={className}
+      />
+    );
+  }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -45,7 +82,9 @@ export function RevealImage({ src, alt }: { src: string; alt: string }) {
       ref={ref}
       src={src}
       alt={alt}
-      className={cn('reveal-img size-full object-cover', inView && 'is-in')}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      className={cn(className, 'absolute inset-0')}
     />
   );
 }

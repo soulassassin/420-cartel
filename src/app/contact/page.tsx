@@ -30,7 +30,7 @@ const BRANCHES = [
 
 export default function ContactPage() {
   return (
-    <main className="bg-void px-[18px] pb-[78px] md:px-[43px]">
+    <main className="bg-void px-4 pb-[78px] md:px-12">
       <section className="py-[78px]">
         <h1 className="display-xl headline-in">
           Find

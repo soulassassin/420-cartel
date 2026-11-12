@@ -103,9 +103,14 @@ export async function middleware(request: NextRequest) {
   });
 
   // getUser() (not getSession()) revalidates the JWT against the auth server.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // That is a network round trip on every page request, so it is skipped when
+  // the browser holds no Supabase auth cookie at all: with no token there is
+  // nobody to validate and no session to refresh, and the visitor is simply
+  // signed out. Anonymous traffic to the public pages no longer waits on it.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token'));
+  const user = hasAuthCookie ? (await supabase.auth.getUser()).data.user : null;
 
   const path = request.nextUrl.pathname;
   const needsMember = !isDemo && MEMBER_ROUTES.some((route) => path.startsWith(route));

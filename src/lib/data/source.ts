@@ -43,6 +43,7 @@ import type {
   StockMovementType,
 } from '@/types/database';
 import { createCartelBrowserClient } from '@/lib/supabase/client';
+import type { PosMemberSnapshot } from '@/lib/crm/pos-insights';
 import {
   LocalEngineError,
   localAddCrmInteraction,
@@ -928,6 +929,70 @@ export async function getMemberDossier(memberId: string): Promise<MemberDossier 
     referrer: referrerRes.data ? normalizeMember(referrerRes.data) : null,
     referrals: (referralsRes.data ?? []).map(normalizeMember),
     interactions: interactionsRes.data ?? [],
+  };
+}
+
+/**
+ * The lean member read behind the till's CRM panel.
+ *
+ * `getMemberDossier` loads everything the back office shows (KYC documents,
+ * ledgers, referrals, the whole product table). The counter needs a fraction
+ * of that, and needs it the moment a pass is scanned, so this fetches only
+ * purchase history, staff notes and the loyalty rules.
+ */
+export async function getPosMemberSnapshot(memberId: string): Promise<PosMemberSnapshot | null> {
+  if (isLocalMode()) {
+    const db = readLocalDb();
+    const rawMember = db.members.find((m) => m.id === memberId);
+    if (!rawMember) return null;
+    const orders = db.orders
+      .filter((o) => o.member_id === memberId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, 50);
+    const orderIds = new Set(orders.map((o) => o.id));
+    return {
+      member: normalizeMember(rawMember),
+      orders,
+      orderItems: db.orderItems.filter((item) => orderIds.has(item.order_id)),
+      interactions: db.interactions
+        .filter((i) => i.member_id === memberId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, 30),
+      loyaltyRules: db.loyaltyRules,
+    };
+  }
+
+  const supabase = createCartelBrowserClient();
+  const [memberRes, ordersRes, interactionsRes, loyaltyRules] = await Promise.all([
+    supabase.from('members').select('*').eq('id', memberId).maybeSingle(),
+    supabase
+      .from('orders')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('crm_interactions')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false })
+      .limit(30),
+    getLoyaltyRules(),
+  ]);
+  if (memberRes.error) throw wrap(memberRes.error);
+  if (!memberRes.data) return null;
+  if (ordersRes.error) throw wrap(ordersRes.error);
+  if (interactionsRes.error) throw wrap(interactionsRes.error);
+
+  const orders = ordersRes.data ?? [];
+  const orderItems = await listOrderItems(orders.map((o) => o.id));
+
+  return {
+    member: normalizeMember(memberRes.data),
+    orders,
+    orderItems,
+    interactions: interactionsRes.data ?? [],
+    loyaltyRules,
   };
 }
 

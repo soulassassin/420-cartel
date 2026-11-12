@@ -6,7 +6,7 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: { DEFAULT: '18px', md: '43px' },
+      padding: { DEFAULT: '16px', md: '48px' },
       screens: { '2xl': '1440px' },
     },
     extend: {

@@ -138,6 +138,7 @@ export function CartelCommandNav() {
               src="/fourtwentycartel_logo.jpg"
               alt="420 Cartel"
               fill
+              sizes="40px"
               className="object-cover"
               priority
             />
@@ -242,6 +243,7 @@ export function CartelCommandNav() {
                     src="/fourtwentycartel_logo.jpg"
                     alt="420 Cartel"
                     fill
+                    sizes="40px"
                     className="object-cover"
                   />
                 </div>

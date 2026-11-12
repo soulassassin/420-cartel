@@ -251,7 +251,7 @@ export default function ShopPage() {
           <div
             role="tablist"
             aria-label="Catalogue categories"
-            className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth -mx-[18px] px-[18px] sm:mx-0 sm:px-0 sm:flex-wrap"
+            className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap"
           >
             {TABS.map((entry) => (
               <Button
@@ -274,7 +274,7 @@ export default function ShopPage() {
 
         {/* Flower Grade Filter Pills */}
         {(tab === 'ALL' || tab === 'FLOWER') && categories.length > 0 ? (
-          <div className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-[18px] px-[18px] sm:mx-0 sm:px-0 sm:flex-wrap">
+          <div className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
             <span className="shrink-0 font-mono text-[11px] sm:text-xs uppercase tracking-wider text-ash pr-1">Grade:</span>
             <Button
               variant={gradeFilter === 'ALL' ? 'active' : 'ghost'}
@@ -360,7 +360,7 @@ export default function ShopPage() {
                 {IS_LOCAL_PREVIEW ? (
                   <button
                     type="button"
-                    className="ghost-link text-[19px] text-ash"
+                    className="ghost-link text-left text-[19px] text-ash"
                     onClick={() => void simulateMember()}
                     disabled={simulating}
                   >
@@ -489,7 +489,11 @@ function ProductCard({
       {/* Media: photography, or a hover reel once one has been generated. */}
       <div className="relative aspect-[4/3] sm:aspect-[3/4] overflow-hidden">
         {product.hero_media_url && !/\.(mp4|webm)(\?|$)/i.test(product.hero_media_url) ? (
-          <RevealImage src={product.hero_media_url} alt={product.name} />
+          <RevealImage
+            src={product.hero_media_url}
+            alt={product.name}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
         ) : product.hero_media_url ? (
           <video
             src={product.hero_media_url}

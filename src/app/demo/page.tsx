@@ -86,6 +86,7 @@ export default function DemoAccessPage() {
                 src="/fourtwentycartel_logo.jpg"
                 alt="420 Cartel"
                 fill
+                sizes="48px"
                 className="object-cover"
                 priority
               />

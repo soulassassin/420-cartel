@@ -261,7 +261,7 @@ export default function CartelAgentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-void text-foreground pt-24 pb-20 px-4 sm:px-8">
+    <main className="min-h-screen bg-void text-foreground pt-8 pb-20 px-4 md:px-12 md:pt-12">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header Banner */}
         <header className="border border-ash p-6 sm:p-8 ">
@@ -585,12 +585,12 @@ export default function CartelAgentPage() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isBusy}
               placeholder="Ask the 420 Cartel Vault Agent to filter strains, calculate courier fees, verify an SA ID, or craft a Higgsfield prompt..."
-              className="flex-1 bg-transparent border border-ash focus:border-foreground px-4 py-3 type-ui text-foreground placeholder:text-foreground outline-none transition-colors"
+              className="min-w-0 flex-1 bg-transparent border border-ash focus:border-foreground px-4 py-3 type-ui text-foreground placeholder:text-foreground outline-none transition-colors"
             />
             <button
               type="submit"
               disabled={isBusy || !input.trim()}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-foreground hover:bg-foreground/90 disabled:opacity-40 text-background font-medium type-ui transition-all"
+              className="inline-flex shrink-0 items-center gap-2 px-4 py-3 sm:px-5 bg-foreground hover:bg-foreground/90 disabled:opacity-40 text-background font-medium type-ui transition-all"
             >
               <Send className="w-4 h-4" />
               <span>{isBusy ? 'Thinking...' : 'Send'}</span>

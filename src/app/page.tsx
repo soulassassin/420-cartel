@@ -171,23 +171,27 @@ function Marquee() {
 }
 
 /**
- * Even product wall: one, two, then three equal columns. Every tile has the
+ * Even product wall: two equal columns, then three from xl. Every tile has the
  * same 3:4 frame, so image tops, image bottoms and captions line up per row.
  * Each tile flashes once as it scrolls in, and lifts, zooms and flashes on hover.
  */
 function TileWall() {
   return (
-    <div className="grid gap-x-4 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-y-12 xl:grid-cols-3">
       {TILES.map((tile, index) => (
         <Reveal key={tile.slug} delay={(index % 3) * STAGGER}>
           <Link href="/shop" className="tile group block">
             <div className="tile-frame aspect-[3/4]">
-              <div className="tile-media size-full">
-                <RevealImage src={`/products/${tile.slug}.webp`} alt={tile.name} />
+              <div className="tile-media relative size-full">
+                <RevealImage
+                  src={`/products/${tile.slug}.webp`}
+                  alt={tile.name}
+                  sizes="(max-width: 1280px) 50vw, 33vw"
+                />
               </div>
             </div>
-            <p className="mt-4 text-xl">{tile.name}</p>
-            <p className="tile-tagline text-base text-ash">{tile.tagline}</p>
+            <p className="mt-3 text-base leading-tight sm:mt-4 sm:text-xl">{tile.name}</p>
+            <p className="tile-tagline mt-1 text-sm text-ash sm:mt-0 sm:text-base">{tile.tagline}</p>
           </Link>
         </Reveal>
       ))}
@@ -304,8 +308,8 @@ export default function LandingPage() {
                   <p className={`mt-4 ${BODY}`}>{item.detail}</p>
                   <p className="mt-2 text-base">{item.sizes}</p>
                 </div>
-                <div className="aspect-[3/4] w-40 overflow-hidden">
-                  <RevealImage src={`/products/${item.slug}.webp`} alt="" />
+                <div className="relative aspect-[3/4] w-40 overflow-hidden">
+                  <RevealImage src={`/products/${item.slug}.webp`} alt="" sizes="160px" />
                 </div>
               </Reveal>
             </li>
@@ -335,8 +339,8 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
-      <div className="-mx-4 mt-16 aspect-[16/9] overflow-hidden md:-mx-12 md:mt-24 md:aspect-[21/9]">
-        <RevealImage src="/products/lineup.webp" alt="The 420 Cartel range laid out in a row" />
+      <div className="relative -mx-4 mt-16 aspect-[16/9] overflow-hidden md:-mx-12 md:mt-24 md:aspect-[21/9]">
+        <RevealImage src="/products/lineup.webp" alt="The 420 Cartel range laid out in a row" sizes="100vw" />
       </div>
 
       {/* Testimonials: one lead quote, two supporting */}
