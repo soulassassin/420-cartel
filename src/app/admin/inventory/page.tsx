@@ -523,7 +523,7 @@ export default function AdminInventoryPage() {
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Eyebrow>Back Office · Module F</Eyebrow>
-            <h1 className="mt-2 display-md text-white">
+            <h1 className="mt-2 display-lg text-white">
               Vault <span className="">Inventory</span>
             </h1>
             <p className="mt-2 max-w-2xl type-ui text-ash">

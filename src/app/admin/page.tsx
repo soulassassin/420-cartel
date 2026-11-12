@@ -1,5 +1,3 @@
-import Image from 'next/image';
-import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { ArrowRight, Boxes, ScanLine, Trophy, Users } from 'lucide-react';
 import { Card, Eyebrow } from '@/components/ui/surfaces';
@@ -43,22 +41,10 @@ export default function AdminHubPage() {
   return (
     <main className="min-h-screen bg-void pb-28 pt-14">
       <div className="container max-w-5xl">
-        <div className="flex items-center gap-4">
-          <Image
-            src="/fourtwentycartel_logo.jpg"
-            alt="420 Cartel"
-            width={48}
-            height={48}
-            className="rounded-full border border-gold/30 object-cover"
-          />
-          <BrandLogo priority />
-          <div>
-            <Eyebrow>Back Office Command</Eyebrow>
-            <h1 className="mt-1 display-md text-white">
-              420 Cartel Operations
-            </h1>
-          </div>
-        </div>
+        <Eyebrow>Back Office Command</Eyebrow>
+        <h1 className="mt-2 display-lg text-white">
+          420 Cartel Operations
+        </h1>
         <p className="mt-3 max-w-xl type-ui text-ash">
           Select an operational surface below to manage master batches, member KYC verification,
           loyalty rules, or the floor terminal.

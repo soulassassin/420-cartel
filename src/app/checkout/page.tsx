@@ -12,6 +12,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  MessageCircle,
   Printer,
   ShieldCheck,
   Sparkles,
@@ -28,6 +29,7 @@ import { UOM_PRECISION, UOM_SYMBOL, formatBaseQty } from '@/lib/uom';
 import {
   IS_LOCAL_PREVIEW,
   getLoyaltyRules,
+  isLocalMode,
   listBranches,
   listMembers,
   processOrder,
@@ -48,6 +50,11 @@ import {
 import { isVerifiedMember, useSessionStore } from '@/lib/store/session';
 import { attachPlacesAutocomplete } from '@/lib/delivery-zone-engine';
 import { LEGAL_AGE } from '@/lib/sa-id';
+import {
+  branchWhatsAppNumber,
+  buildOrderWhatsAppMessage,
+  orderWhatsAppLink,
+} from '@/lib/notifications/order-whatsapp';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import type {
@@ -167,6 +174,13 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ProcessOrderResult | null>(null);
+  // How the branch hears about the order: `link` opens WhatsApp with the order
+  // pre-written; `autoSent` is true once the server delivered it automatically.
+  const [branchNotice, setBranchNotice] = useState<{
+    branchName: string;
+    link: string | null;
+    autoSent: boolean;
+  } | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   useCartReservationSync();
@@ -377,6 +391,54 @@ export default function CheckoutPage() {
       setReceipt(result);
       clearCart();
 
+      // Tell the branch. The one-tap WhatsApp link is always prepared; when the
+      // WhatsApp Business API is configured the server also sends it unprompted.
+      const branchName = activeBranch?.name ?? 'the branch';
+      const branchNumber = activeBranch ? branchWhatsAppNumber(activeBranch) : null;
+      const message = buildOrderWhatsAppMessage({
+        orderNumber: result.order_number,
+        branchName,
+        fulfilment: result.fulfilment_type === 'DELIVERY' ? 'DELIVERY' : 'PICKUP',
+        member: {
+          name: `${member.first_name} ${member.last_name}`.trim(),
+          code: member.member_code,
+          phone: member.phone,
+        },
+        items: result.items.map((item) => ({
+          quantity: item.quantity,
+          productName: item.product_name,
+          variantLabel: item.variant_label,
+          lineTotalCents: item.line_total_cents,
+        })),
+        subtotalCents: result.subtotal_cents,
+        discountCents: result.discount_cents,
+        deliveryFeeCents: result.delivery_fee_cents,
+        totalCents: result.total_cents,
+        paymentLabel: providerOption?.label ?? null,
+        pickupSlotStart: new Date(now + slotOffsets[0]).toISOString(),
+        pickupSlotEnd: new Date(now + slotOffsets[1]).toISOString(),
+        deliveryAddress,
+        deliverySuburb,
+        deliveryInstructions,
+      });
+      setBranchNotice({
+        branchName,
+        link: branchNumber ? orderWhatsAppLink(branchNumber, message) : null,
+        autoSent: false,
+      });
+      if (!isLocalMode()) {
+        void fetch('/api/notifications/order-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: result.order_id }),
+        })
+          .then((response) => response.json())
+          .then((body: { sent?: boolean }) => {
+            if (body.sent) setBranchNotice((notice) => (notice ? { ...notice, autoSent: true } : notice));
+          })
+          .catch(() => undefined); // The one-tap link remains as the fallback.
+      }
+
       // Refresh member balance
       const freshMembers = await listMembers();
       const updated = freshMembers.find((row) => row.id === member.id);
@@ -412,6 +474,7 @@ export default function CheckoutPage() {
     totalCents,
     clearCart,
     syncMember,
+    activeBranch,
   ]);
 
   // --- Receipt view after order completes ---------------------------------
@@ -508,8 +571,48 @@ export default function CheckoutPage() {
               ) : null}
             </div>
 
+            {branchNotice ? (
+              <div className="mt-5 sm:mt-6 flex flex-col gap-3 border border-[color:var(--border-mono)] px-3.5 py-3 sm:px-4 sm:py-4 print:hidden">
+                <p className="font-mono text-xs sm:type-ui text-ash">
+                  {branchNotice.autoSent ? (
+                    <span className="text-foreground">
+                      <Check className="mr-1.5 inline size-3.5" />
+                      {branchNotice.branchName} has been sent this order on WhatsApp.
+                    </span>
+                  ) : branchNotice.link ? (
+                    <>
+                      Send your order and member details to {branchNotice.branchName} on WhatsApp so
+                      the team can start preparing it.
+                    </>
+                  ) : (
+                    <>{branchNotice.branchName} will see this order at the counter.</>
+                  )}
+                </p>
+                {branchNotice.link ? (
+                  <Button
+                    variant={branchNotice.autoSent ? 'outline' : 'gold'}
+                    size="lg"
+                    asChild
+                    className="w-full sm:w-auto h-12 px-6"
+                  >
+                    <a href={branchNotice.link} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="size-4" />
+                      {branchNotice.autoSent
+                        ? 'Open WhatsApp chat with the branch'
+                        : `WhatsApp order to ${branchNotice.branchName}`}
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 print:hidden">
-              <Button variant="gold" size="lg" asChild className="w-full sm:w-auto h-12 sm:h-14 px-6">
+              <Button
+                variant={branchNotice?.link && !branchNotice.autoSent ? 'outline' : 'gold'}
+                size="lg"
+                asChild
+                className="w-full sm:w-auto h-12 sm:h-14 px-6"
+              >
                 <Link href="/shop">
                   Return to Dispensary
                   <ArrowRight className="size-4" />

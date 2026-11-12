@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { BrandLogo } from '@/components/layout/BrandLogo';
 import {
   Banknote,
   Check,
@@ -474,14 +473,6 @@ export default function PosTerminalPage() {
         {/* Top bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--border-mono)] pb-4 print:hidden">
           <div className="flex items-center gap-3">
-            <Image
-              src="/fourtwentycartel_logo.jpg"
-              alt="420 Cartel"
-              width={40}
-              height={40}
-              className="rounded-full border border-gold/30 object-cover"
-            />
-            <BrandLogo priority />
             <div>
               <Eyebrow>{branchName} · Counter Terminal 01</Eyebrow>
               {branches.length > 1 ? (
@@ -508,7 +499,7 @@ export default function PosTerminalPage() {
                   ))}
                 </select>
               ) : null}
-              <h1 className="font-display text-xl uppercase text-white">
+              <h1 className="mt-1 display-md text-white">
                 Point of Sale
               </h1>
             </div>

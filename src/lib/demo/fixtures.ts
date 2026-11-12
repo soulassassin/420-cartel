@@ -35,6 +35,7 @@ export const SEED_IDS = {
   branch: {
     sandton: 'b1000000-0000-4000-8000-000000000001',
     rosebank: 'b1000000-0000-4000-8000-000000000002',
+    norwood: 'b1000000-0000-4000-8000-000000000003',
   },
   category: {
     greenhouse: '49936753-5d0f-46f0-b928-5c18142a8b95',
@@ -129,6 +130,27 @@ export const SEED_BRANCHES: BranchRow[] = [
     created_at: NOW,
     updated_at: NOW,
   },
+  {
+    id: SEED_IDS.branch.norwood,
+    name: 'Norwood',
+    slug: 'norwood',
+    address_line: '62 Grant Ave',
+    suburb: 'Norwood',
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    postal_code: '2192',
+    latitude: -26.1585,
+    longitude: 28.076,
+    phone: '072 333 0854',
+    is_active: true,
+    timezone: 'Africa/Johannesburg',
+    pickup_slot_minutes: 30,
+    opens_at: '09:00',
+    closes_at: '20:00',
+    delivery_enabled: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
 ];
 
 export const SEED_STAFF: StaffProfileRow[] = [
@@ -194,6 +216,9 @@ export const SEED_DELIVERY_ZONES: DeliveryZoneRow[] = [
   zone(5, SEED_IDS.branch.rosebank, 'Zone 1 · Express', 10, 6_000, 30_000, 150_000, 45, 1),
   zone(6, SEED_IDS.branch.rosebank, 'Zone 2 · Metro', 25, 12_000, 50_000, 250_000, 90, 2),
   zone(7, SEED_IDS.branch.rosebank, 'Zone 3 · Extended', 50, 19_500, 75_000, 400_000, 150, 3),
+  zone(8, SEED_IDS.branch.norwood, 'Zone 1 · Express', 10, 6_000, 30_000, 150_000, 45, 1),
+  zone(9, SEED_IDS.branch.norwood, 'Zone 2 · Metro', 25, 12_000, 50_000, 250_000, 90, 2),
+  zone(10, SEED_IDS.branch.norwood, 'Zone 3 · Extended', 50, 19_500, 75_000, 400_000, 150, 3),
 ];
 
 // ---------------------------------------------------------------------------
