@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, User, X } from 'lucide-react';
@@ -11,7 +11,8 @@ import { createCartelBrowserClient } from '@/lib/supabase/client';
 import { useSessionStore } from '@/lib/store/session';
 
 /**
- * Site navigation: brand seal at left, desktop ghost links at right, mobile slide-over drawer.
+ * Site navigation, identical on every page: brand logo at left, all links visible at
+ * right on desktop (white, gold on hover), slide-over drawer on mobile.
  *
  * Ordered links:
  *  1. Home (/)
@@ -35,7 +36,7 @@ const LINKS = [
 ];
 
 const STAFF_LINKS = [
-  { label: 'POS', href: '/pos' },
+  { label: 'POS', href: '/admin/pos' },
   { label: 'Admin', href: '/admin' },
 ];
 
@@ -108,99 +109,45 @@ export function CartelCommandNav() {
     };
   }, [pathname]);
 
-  const isHome = pathname === '/';
   const links = isStaff ? [...LINKS, ...STAFF_LINKS] : LINKS;
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const profileActive = ['/account', '/login', '/pass'].some((href) => pathname.startsWith(href));
 
   return (
-    <header
-      className={cn(
-        'relative bg-void print:hidden',
-        isHome
-          ? 'px-4 pb-8 pt-16 md:px-12 md:pb-12 md:pt-16'
-          : 'flex items-center justify-between gap-6 px-[18px] py-[18px] md:px-[43px]',
-      )}
-    >
-      {isHome ? (
-        <>
-          {/* Landing header: the brand mark alone, centred, with clear space
-              on every side. All navigation lives behind the one Menu control. */}
-          <Link
-            href="/"
-            aria-label="420 Cartel home"
-            className="brand-mark mx-auto block w-[clamp(14rem,26vw,22rem)]"
-          >
-            {/* 8:7 frame, anchored to the top, trims the empty band under the
-                wordmark so the mark sits optically centred. */}
-            <div className="brand-mark-inner relative aspect-[8/7] overflow-hidden">
-              <Image
-                src="/fourtwentycartel_logo.jpg"
-                alt="Four Twenty Cartel"
-                fill
-                priority
-                sizes="(min-width: 768px) 26vw, 224px"
-                className="object-cover object-top"
-              />
-            </div>
-          </Link>
-          <button
-            type="button"
-            aria-label="Open navigation"
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen(true)}
-            className="absolute right-4 top-4 flex h-12 items-center md:right-12 md:top-8"
-          >
-            <span className="ghost-link section-label !text-foreground">Menu</span>
-          </button>
-        </>
-      ) : (
-        <>
-      {/* Brand logo & title */}
-      <Link href="/" className="flex items-center gap-3 shrink-0 group" aria-label="420 Cartel home">
-        <div className="relative size-12 md:size-14 overflow-hidden rounded-full border border-foreground/20 group-hover:border-foreground transition-colors">
-          <Image
-            src="/fourtwentycartel_logo.jpg"
-            alt="420 Cartel"
-            fill
-            priority
-            className="object-cover"
-          />
-        </div>
-        <div className="hidden sm:flex flex-col">
-          <span className="font-display text-lg uppercase tracking-wider text-white">420 Cartel</span>
-          <span className="font-mono text-[10px] tracking-widest text-ash uppercase">Social Lounge &amp; Reserve</span>
+    <header className="relative flex items-center justify-between gap-6 bg-void px-4 pb-4 pt-6 print:hidden md:px-12 md:pb-6 md:pt-8">
+      {/* Brand logo, alone, at the same size on every page */}
+      <Link href="/" aria-label="420 Cartel home" className="brand-mark block shrink-0">
+        <div className="brand-mark-inner">
+          <BrandLogo priority />
         </div>
       </Link>
 
-      {/* Desktop Navigation */}
-      <nav
-        aria-label="Main"
-        className="hidden md:flex items-center gap-x-[27px] md:gap-x-[43px]"
-      >
+      {/* Desktop navigation: every option visible, white, gold on hover */}
+      <nav aria-label="Main" className="hidden items-center gap-x-6 md:flex lg:gap-x-10">
         {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             aria-current={isActive(link.href) ? 'page' : undefined}
-            className={cn('ghost-link text-[19px]', !isActive(link.href) && 'text-ash')}
+            className="nav-link text-[19px]"
           >
             {link.label}
           </Link>
         ))}
 
-        {/* Explicit Login / Dossier indicator */}
         {!member ? (
           <Link
             href="/login"
-            className={cn('ghost-link text-[19px]', !isActive('/login') && 'text-ash')}
+            aria-current={isActive('/login') ? 'page' : undefined}
+            className="nav-link text-[19px]"
           >
             Log in
           </Link>
         ) : (
           <Link
             href="/account"
-            className={cn('ghost-link font-mono text-[14px] uppercase tracking-wider text-ash hover:text-white', profileActive && 'text-white')}
+            aria-current={profileActive ? 'page' : undefined}
+            className="nav-link font-mono text-[14px] uppercase tracking-wider"
           >
             {member.member_code ? member.member_code : 'Dossier'}
           </Link>
@@ -210,29 +157,27 @@ export function CartelCommandNav() {
           href="/account"
           aria-label="Your profile"
           aria-current={profileActive ? 'page' : undefined}
-          className={cn('flex h-11 w-11 items-center justify-center', !profileActive && 'text-ash')}
+          className="nav-icon flex h-11 w-11 items-center justify-center"
         >
           <User className="size-6" strokeWidth={1.5} />
         </Link>
       </nav>
 
-      {/* Mobile Hamburger Button */}
+      {/* Mobile menu button */}
       <button
         type="button"
-        aria-label="Toggle navigation"
+        aria-label="Open navigation"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="md:hidden flex h-11 w-11 items-center justify-center text-ash hover:text-white transition-colors"
+        className="nav-icon flex h-11 w-11 items-center justify-center md:hidden"
       >
         <Menu className="size-6" />
       </button>
-        </>
-      )}
 
-      {/* Slide-over drawer: mobile everywhere, every width on the landing page */}
+      {/* Slide-over drawer: mobile only */}
       <div
         className={cn(
-          'fixed inset-0 z-50 transition-opacity duration-300 ease-in-out',
-          !isHome && 'md:hidden',
+          'fixed inset-0 z-50 transition-opacity duration-300 ease-in-out md:hidden',
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
         aria-hidden={!isOpen}
@@ -256,21 +201,9 @@ export function CartelCommandNav() {
               <Link
                 href="/"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3"
                 aria-label="420 Cartel home"
               >
-                <div className="relative size-10 overflow-hidden rounded-full border border-foreground/20">
-                  <Image
-                    src="/fourtwentycartel_logo.jpg"
-                    alt="420 Cartel"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-base uppercase tracking-wider text-white">420 Cartel</span>
-                  <span className="font-mono text-[9px] tracking-widest text-ash uppercase">Social Lounge</span>
-                </div>
+                <BrandLogo />
               </Link>
               <button
                 type="button"
@@ -290,10 +223,7 @@ export function CartelCommandNav() {
                   href={link.href}
                   onClick={() => setIsOpen(false)}
                   aria-current={isActive(link.href) ? 'page' : undefined}
-                  className={cn(
-                    'flex items-center py-3 text-2xl font-display uppercase tracking-wide transition-colors',
-                    isActive(link.href) ? 'text-white' : 'text-ash hover:text-white'
-                  )}
+                  className="nav-link w-fit py-2 font-display text-2xl uppercase tracking-wide"
                 >
                   {link.label}
                 </Link>
@@ -360,7 +290,7 @@ export function CartelCommandNav() {
                 <span className="font-mono text-[10px] uppercase tracking-widest text-ash">Staff Operations</span>
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    href="/pos"
+                    href="/admin/pos"
                     onClick={() => setIsOpen(false)}
                     className="py-2 text-center border border-foreground/20 text-xs font-mono uppercase tracking-wider text-ash hover:text-white hover:border-white transition-colors"
                   >

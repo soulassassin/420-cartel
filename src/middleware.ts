@@ -17,6 +17,8 @@ import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE, affiliateTracker } from '@/li
 
 const MEMBER_ROUTES = ['/vault', '/shop', '/checkout', '/account', '/pass'];
 const STAFF_ROUTES = ['/pos', '/admin'];
+/** The one place staff sign in. It sits under /admin but must stay reachable signed out. */
+const STAFF_LOGIN = '/admin/login';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -69,13 +71,14 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const needsMember = MEMBER_ROUTES.some((route) => path.startsWith(route));
-  const needsStaff = STAFF_ROUTES.some((route) => path.startsWith(route));
+  const needsStaff =
+    path !== STAFF_LOGIN && STAFF_ROUTES.some((route) => path.startsWith(route));
 
   // The Vault sends strangers to Membership; profile pages ask them to log in.
   if ((needsMember || needsStaff) && !user) {
     const target = request.nextUrl.clone();
     const profilePage = path.startsWith('/account') || path.startsWith('/pass');
-    target.pathname = needsStaff ? '/staff-login' : profilePage ? '/login' : '/onboarding';
+    target.pathname = needsStaff ? STAFF_LOGIN : profilePage ? '/login' : '/onboarding';
     target.searchParams.set('next', path);
     return NextResponse.redirect(target);
   }

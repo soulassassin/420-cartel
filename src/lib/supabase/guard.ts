@@ -62,7 +62,7 @@ export async function requireStaff(): Promise<StaffGate> {
   }
 
   const viewer = await getViewer();
-  if (!viewer.isStaff) redirect('/staff-login');
+  if (!viewer.isStaff) redirect('/admin/login');
 
   return { viewer, previewUnlocked: false };
 }
@@ -78,7 +78,7 @@ export async function requireManager(fallbackPath = '/admin'): Promise<StaffGate
   }
 
   const viewer = await getViewer();
-  if (!viewer.isStaff) redirect('/staff-login');
+  if (!viewer.isStaff) redirect('/admin/login');
   if (!viewer.isManager) redirect(fallbackPath);
 
   return { viewer, previewUnlocked: false };

@@ -61,6 +61,13 @@ export type StockMovementType =
   | 'TRANSFER_OUT'
   | 'TRANSFER_IN';
 export type MediaJobStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type CrmInteractionChannel =
+  | 'IN_STORE'
+  | 'WHATSAPP'
+  | 'PHONE'
+  | 'EMAIL'
+  | 'COMPLIANCE'
+  | 'VIP_CONCIERGE';
 
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
@@ -148,9 +155,34 @@ export interface MemberRow {
   referred_by_code: string | null;
   suspended_reason: string | null;
   internal_notes: string | null;
+  crm_tags: string[];
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CrmInteractionRow {
+  id: string;
+  member_id: string;
+  branch_id: string | null;
+  staff_id: string | null;
+  channel: CrmInteractionChannel;
+  summary: string;
+  follow_up_at: string | null;
+  follow_up_done: boolean;
+  created_at: string;
+}
+
+export interface CartStockHoldRow {
+  id: string;
+  cart_session_id: string;
+  branch_id: string;
+  product_id: string;
+  quantity: number;
+  base_qty: number;
+  member_label: string | null;
+  expires_at: string;
+  created_at: string;
 }
 
 export interface KycDocumentRow {
@@ -189,8 +221,24 @@ export interface ProductRow {
   hero_media_url: string | null;
   gallery: GalleryEntry[];
   model_glb_url: string | null;
+  /** Manager-editable shelf category (e.g. a flower grade). Null = uncategorised. */
+  category_id?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * A shelf category managers add and remove from the inventory screen, such as
+ * the flower grades Greenhouse, Indoor and Hydro. `product_type` says which
+ * fixed product type it belongs under.
+ */
+export interface CatalogueCategoryRow {
+  id: string;
+  name: string;
+  product_type: ProductCategory;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface ProductVariantRow {
@@ -641,6 +689,7 @@ export interface Database {
           Partial<KycDocumentRow>
       >;
       products: Table<ProductRow>;
+      catalogue_categories: Table<CatalogueCategoryRow>;
       product_variants: Table<ProductVariantRow>;
       master_batches: Table<MasterBatchRow>;
       /** Trigger-maintained. Readable by everyone, writable by nobody. */
@@ -656,6 +705,8 @@ export interface Database {
       affiliate_codes: Table<AffiliateCodeRow>;
       affiliate_attributions: Table<AffiliateAttributionRow>;
       product_media_jobs: Table<ProductMediaJobRow>;
+      crm_interactions: Table<CrmInteractionRow>;
+      inventory_reservations: Table<CartStockHoldRow>;
       audit_logs: Table<AuditLogRow>;
     };
     Views: {
@@ -688,6 +739,7 @@ export interface Database {
         Returns: PosMemberLookupRow[];
       };
       rotate_member_qr_token: { Args: Record<string, never>; Returns: string };
+      staff_rotate_member_qr_token: { Args: { p_member_id: string }; Returns: string };
       adjust_batch_stock: {
         Args: {
           p_batch_id: string;
@@ -709,6 +761,15 @@ export interface Database {
       release_product_reservation: {
         Args: { p_allocation: BatchAllocationEntry[] };
         Returns: undefined;
+      };
+      sync_cart_stock_holds: {
+        Args: {
+          p_cart_session_id: string;
+          p_branch_id: string;
+          p_holds: Json;
+          p_member_label?: string | null;
+        };
+        Returns: Json;
       };
       resolve_delivery_zone: {
         Args: { p_branch_id: string; p_lat: number; p_lng: number };
@@ -747,6 +808,7 @@ export interface Database {
       payment_status: PaymentStatus;
       stock_movement_type: StockMovementType;
       media_job_status: MediaJobStatus;
+      crm_interaction_channel: CrmInteractionChannel;
     };
     CompositeTypes: Record<string, never>;
   };

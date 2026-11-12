@@ -4,7 +4,8 @@
 
 /* =====================================================================
    420 CARTEL :: DESIGN TOKENS
-   Black canvas, white type, one grey. Colour comes only from photography.
+   Black canvas, white type, one grey, and one accent: gold. Gold marks
+   labels, rules and interaction states; it is never a large fill at rest.
    No gradients, shadows, blur or radius anywhere, on any route.
    ===================================================================== */
 @layer base {
@@ -23,10 +24,12 @@
     --text-muted: #8e8e8e;
     --text-faint: #8e8e8e;
 
-    /* Legacy accent names resolve to the monochrome palette. */
-    --accent-gold: #ffffff;
-    --accent-gold-bright: #ffffff;
-    --accent-gold-deep: #8e8e8e;
+    /* The single accent. 9.6:1 on black, so it is safe for small text. */
+    --gold: #d4af37;
+    --nav-gold: var(--gold);
+    --accent-gold: var(--gold);
+    --accent-gold-bright: #e8c766;
+    --accent-gold-deep: #9a7b1f;
 
     --border-subtle: #8e8e8e;
     --border-hard: #ffffff;
@@ -109,12 +112,12 @@
   }
 
   ::selection {
-    background: #ffffff;
+    background: var(--gold);
     color: #000000;
   }
 
   :focus-visible {
-    outline: 1px solid #ffffff;
+    outline: 1px solid var(--gold);
     outline-offset: 2px;
   }
 
@@ -156,7 +159,7 @@
   .eyebrow {
     font-size: var(--text-ui);
     line-height: 1.25;
-    color: var(--text-muted);
+    color: var(--gold);
   }
 
   .display-xl,
@@ -194,9 +197,15 @@
     @apply border border-hairline;
   }
 
-  /* The system's one interaction: a 1px grey rule appears under the link. */
+  /* The system's one interaction: the link turns gold over a 1px gold rule. */
   .ghost-link {
     @apply relative inline-block text-foreground no-underline;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .ghost-link:hover,
+  .ghost-link:focus-visible {
+    color: var(--gold);
   }
 
   .ghost-link::after {
@@ -206,7 +215,7 @@
     right: 0;
     bottom: -0.15em;
     height: 1px;
-    background: var(--text-muted);
+    background: var(--gold);
     opacity: 0;
   }
 
@@ -215,13 +224,51 @@
     opacity: 1;
   }
 
+  /* Navigation links: white at rest; gold text and a gold underline that
+     draws in on hover, keyboard focus, and for the current page. */
+  .nav-link,
+  .nav-icon {
+    color: #ffffff;
+    transition: color var(--dur-base) var(--ease-out);
+  }
+
+  .nav-link {
+    @apply relative inline-block no-underline;
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.2em;
+    height: 2px;
+    background: var(--nav-gold);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .nav-link:hover,
+  .nav-link:focus-visible,
+  .nav-icon:hover,
+  .nav-icon:focus-visible {
+    color: var(--nav-gold);
+  }
+
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after,
+  .nav-link[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+
   .hairline-active {
     @apply border border-[color:var(--border-mono)];
   }
 
   .hairline-active:hover,
   .hairline-active[data-active='true'] {
-    @apply border-foreground;
+    border-color: var(--gold);
   }
 
   .cartel-scroll {
@@ -278,7 +325,7 @@
     line-height: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--gold);
   }
 
   /* Primary and secondary actions. The fill is a pseudo-element that wipes
@@ -301,6 +348,7 @@
     white-space: nowrap;
     transition:
       color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out),
       transform var(--dur-fast) var(--ease-out);
   }
 
@@ -320,7 +368,7 @@
   }
 
   .btn-primary::before {
-    background: #000000;
+    background: var(--gold);
   }
 
   .btn-secondary {
@@ -329,7 +377,7 @@
   }
 
   .btn-secondary::before {
-    background: #ffffff;
+    background: var(--gold);
   }
 
   .btn-arrow {
@@ -341,7 +389,7 @@
   }
 
   /* Card depth without shadows, which are invisible on black: the card
-     rises and a white rule draws across its top edge. */
+     rises and a gold rule draws across its top edge. */
   .lift {
     position: relative;
     transition: transform var(--dur-base) var(--ease-out);
@@ -354,7 +402,7 @@
     left: -1px;
     right: -1px;
     height: 1px;
-    background: #ffffff;
+    background: var(--gold);
     transform: scaleX(0);
     transform-origin: left;
     transition: transform var(--dur-slow) var(--ease-out);
@@ -363,6 +411,51 @@
   /* Product photo eases in a touch closer when its tile is hovered. */
   .tile-media {
     transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  /* Product tile: rises on hover while a band of light sweeps the photo. */
+  .tile {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .tile-frame {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Two light bands: ::before flashes once on scroll-in, ::after on hover. */
+  .tile-frame::before,
+  .tile-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 65%
+    );
+    transform: translate3d(-110%, 0, 0);
+  }
+
+  .reveal.is-in .tile-frame::before {
+    animation: tile-flash 900ms var(--ease-out) both;
+    animation-delay: calc(var(--reveal-delay, 0ms) + 350ms);
+  }
+
+  @keyframes tile-flash {
+    from {
+      transform: translate3d(-110%, 0, 0);
+    }
+    to {
+      transform: translate3d(110%, 0, 0);
+    }
+  }
+
+  .tile-tagline {
+    transition: color var(--dur-base) var(--ease-out);
   }
 
   /* The brand mark settles in on load and leans in on hover. */
@@ -390,12 +483,11 @@
   }
 
   @media (hover: hover) {
-    .btn-primary:hover {
-      color: #ffffff;
-    }
-
+    /* Both buttons fill gold on hover; black text keeps 9.6:1 on the fill. */
+    .btn-primary:hover,
     .btn-secondary:hover {
       color: #000000;
+      border-color: var(--gold);
     }
 
     .btn:hover::before {
@@ -419,6 +511,20 @@
       transform: scale(1.04);
     }
 
+    .tile:hover {
+      transform: translate3d(0, -8px, 0);
+    }
+
+    /* The band only animates on the way in; it snaps back unseen on leave. */
+    .tile:hover .tile-frame::after {
+      transform: translate3d(110%, 0, 0);
+      transition: transform 800ms var(--ease-out);
+    }
+
+    .tile:hover .tile-tagline {
+      color: var(--gold);
+    }
+
     .brand-mark:hover .brand-mark-inner {
       transform: scale(1.04);
     }
@@ -427,7 +533,7 @@
   /* Outlined display type: scale without adding a second solid mass. */
   .display-outline {
     color: transparent;
-    -webkit-text-stroke: 1px #ffffff;
+    -webkit-text-stroke: 1px var(--gold);
   }
 
   .marquee-track {

@@ -36,7 +36,10 @@ export interface CartLine {
 }
 
 export interface CartState {
+  cartSessionId: string;
   branchId: string | null;
+  syncedBranchId: string | null;
+  syncedHolds: Record<string, number>;
   fulfilment: FulfilmentType;
   lines: CartLine[];
 
@@ -70,6 +73,7 @@ export interface CartState {
   setPickupSlot: (startIso: string, endIso: string) => void;
   setPointsToRedeem: (points: number) => void;
   setReferralCode: (code: string | null) => void;
+  setSyncedHolds: (branchId: string | null, holds: Record<string, number>) => void;
 }
 
 function lineKey(variantId: string, customBaseQty: number | null): string {
@@ -78,10 +82,20 @@ function lineKey(variantId: string, customBaseQty: number | null): string {
 
 const MAX_LINE_QUANTITY = 99;
 
+function makeCartSessionId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `cart-${crypto.randomUUID()}`;
+  }
+  return `cart-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
+      cartSessionId: makeCartSessionId(),
       branchId: null,
+      syncedBranchId: null,
+      syncedHolds: {},
       fulfilment: 'PICKUP',
       lines: [],
       deliveryAddress: null,
@@ -176,6 +190,8 @@ export const useCartStore = create<CartState>()(
       setPointsToRedeem: (points) => set({ pointsToRedeem: Math.max(0, Math.floor(points)) }),
 
       setReferralCode: (referralCode) => set({ referralCode }),
+
+      setSyncedHolds: (syncedBranchId, syncedHolds) => set({ syncedBranchId, syncedHolds }),
     }),
     {
       name: 'cartel-cart',
@@ -183,6 +199,7 @@ export const useCartStore = create<CartState>()(
       storage: createJSONStorage(() => localStorage),
       // Never persist the referral code or a stale points figure.
       partialize: (state) => ({
+        cartSessionId: state.cartSessionId,
         branchId: state.branchId,
         fulfilment: state.fulfilment,
         lines: state.lines,

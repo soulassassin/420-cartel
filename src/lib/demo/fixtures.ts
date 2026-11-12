@@ -12,8 +12,11 @@
 
 import type {
   AffiliateCodeRow,
+  BaseUom,
   BranchRow,
+  CrmInteractionRow,
   DeliveryZoneRow,
+  KycDocumentRow,
   LoyaltyRulesRow,
   MasterBatchRow,
   MemberRow,
@@ -1016,6 +1019,10 @@ interface MemberSpec {
   referredBy?: string | null;
   notes?: string | null;
   suspendedReason?: string | null;
+  homeBranchId?: string;
+  preferredUom?: BaseUom;
+  marketingOptIn?: boolean;
+  crmTags?: string[];
 }
 
 const MEMBER_SPECS: MemberSpec[] = [
@@ -1038,6 +1045,10 @@ const MEMBER_SPECS: MemberSpec[] = [
     approved: true,
     gender: 'MALE',
     notes: 'Founding member. Allocation priority on every Reserve drop.',
+    homeBranchId: SEED_IDS.branch.sandton,
+    preferredUom: 'GRAMS',
+    marketingOptIn: true,
+    crmTags: ['VIP_CONCIERGE', 'SOLVENTLESS_FAN', 'FOUNDER_CIRCLE'],
   },
   {
     id: SEED_IDS.member.cartel7777,
@@ -1058,6 +1069,10 @@ const MEMBER_SPECS: MemberSpec[] = [
     approved: true,
     gender: 'MALE',
     referredBy: 'CARTEL-0420',
+    homeBranchId: SEED_IDS.branch.rosebank,
+    preferredUom: 'MILLILITERS',
+    marketingOptIn: true,
+    crmTags: ['ELIXIR_PREF', 'ROSEBANK_REGULAR'],
   },
   {
     id: SEED_IDS.member.pending,
@@ -1079,6 +1094,10 @@ const MEMBER_SPECS: MemberSpec[] = [
     gender: 'FEMALE',
     referredBy: 'CARTEL-0420',
     notes: 'ID front and selfie uploaded, awaiting reviewer.',
+    homeBranchId: SEED_IDS.branch.sandton,
+    preferredUom: 'GRAMS',
+    marketingOptIn: true,
+    crmTags: ['KYC_BACKLOG'],
   },
   {
     id: SEED_IDS.member.don,
@@ -1099,6 +1118,10 @@ const MEMBER_SPECS: MemberSpec[] = [
     approved: true,
     gender: 'MALE',
     notes: 'Private vault reserve allocation. Direct line to the founder.',
+    homeBranchId: SEED_IDS.branch.sandton,
+    preferredUom: 'GRAMS',
+    marketingOptIn: true,
+    crmTags: ['PRIVATE_VAULT', 'BRAND_AMBASSADOR', 'HIGH_LTV'],
   },
   {
     id: SEED_IDS.member.suspended,
@@ -1119,6 +1142,10 @@ const MEMBER_SPECS: MemberSpec[] = [
     approved: true,
     gender: 'FEMALE',
     suspendedReason: 'Chargeback dispute unresolved — membership suspended pending review.',
+    homeBranchId: SEED_IDS.branch.rosebank,
+    preferredUom: 'UNITS',
+    marketingOptIn: false,
+    crmTags: ['COMPLIANCE_HOLD', 'HIGH_RISK'],
   },
 ];
 
@@ -1147,9 +1174,9 @@ export const SEED_MEMBERS: MemberRow[] = MEMBER_SPECS.map((spec) => ({
   agreement_signed_at: spec.approved ? NOW : null,
   agreement_version: spec.approved ? '2026.1' : null,
   agreement_signature_path: null,
-  preferred_uom: 'GRAMS',
-  marketing_opt_in: true,
-  home_branch_id: SEED_IDS.branch.sandton,
+  preferred_uom: spec.preferredUom ?? 'GRAMS',
+  marketing_opt_in: spec.marketingOptIn ?? true,
+  home_branch_id: spec.homeBranchId ?? SEED_IDS.branch.sandton,
   lifetime_value_cents: spec.lifetimeCents,
   order_count: spec.orders,
   credit_balance_cents: spec.creditCents,
@@ -1158,10 +1185,87 @@ export const SEED_MEMBERS: MemberRow[] = MEMBER_SPECS.map((spec) => ({
   referred_by_code: spec.referredBy ?? null,
   suspended_reason: spec.suspendedReason ?? null,
   internal_notes: spec.notes ?? null,
+  crm_tags: spec.crmTags ?? [],
   last_seen_at: NOW,
   created_at: NOW,
   updated_at: NOW,
 }));
+
+export const SEED_KYC_DOCUMENTS: KycDocumentRow[] = [
+  {
+    id: 'e1000000-0000-4000-8000-000000000001',
+    member_id: SEED_IDS.member.pending,
+    doc_type: 'ID_FRONT',
+    storage_path: 'kyc/cartel-8842/id-front.jpg',
+    mime_type: 'image/jpeg',
+    byte_size: 428_100,
+    review_status: 'PENDING',
+    reviewed_by: null,
+    reviewed_at: null,
+    rejection_reason: null,
+    created_at: NOW,
+  },
+  {
+    id: 'e1000000-0000-4000-8000-000000000002',
+    member_id: SEED_IDS.member.pending,
+    doc_type: 'LIVE_SELFIE',
+    storage_path: 'kyc/cartel-8842/live-selfie.jpg',
+    mime_type: 'image/jpeg',
+    byte_size: 312_400,
+    review_status: 'PENDING',
+    reviewed_by: null,
+    reviewed_at: null,
+    rejection_reason: null,
+    created_at: NOW,
+  },
+];
+
+export const SEED_CRM_INTERACTIONS: CrmInteractionRow[] = [
+  {
+    id: 'f1000000-0000-4000-8000-000000000001',
+    member_id: SEED_IDS.member.don,
+    branch_id: SEED_IDS.branch.sandton,
+    staff_id: SEED_IDS.staff.owner,
+    channel: 'VIP_CONCIERGE',
+    summary: 'Reserved 28g Private Vault Rosin & Reserve Kush Allocation for weekend collection.',
+    follow_up_at: '2026-11-15T10:00:00.000Z',
+    follow_up_done: false,
+    created_at: '2026-11-10T14:30:00.000Z',
+  },
+  {
+    id: 'f1000000-0000-4000-8000-000000000002',
+    member_id: SEED_IDS.member.pending,
+    branch_id: SEED_IDS.branch.sandton,
+    staff_id: SEED_IDS.staff.budtender,
+    channel: 'COMPLIANCE',
+    summary: 'Walk-in ID front & live selfie captured; waiting on signed collective agreement check.',
+    follow_up_at: '2026-11-13T09:00:00.000Z',
+    follow_up_done: false,
+    created_at: '2026-11-11T11:15:00.000Z',
+  },
+  {
+    id: 'f1000000-0000-4000-8000-000000000003',
+    member_id: SEED_IDS.member.cartel0420,
+    branch_id: SEED_IDS.branch.sandton,
+    staff_id: SEED_IDS.staff.owner,
+    channel: 'WHATSAPP',
+    summary: 'Invited to Friday Sandton Vault tasting; prefers solventless hash rosin and Indica flower.',
+    follow_up_at: null,
+    follow_up_done: true,
+    created_at: '2026-11-09T16:45:00.000Z',
+  },
+  {
+    id: 'f1000000-0000-4000-8000-000000000004',
+    member_id: SEED_IDS.member.suspended,
+    branch_id: SEED_IDS.branch.rosebank,
+    staff_id: SEED_IDS.staff.owner,
+    channel: 'COMPLIANCE',
+    summary: 'Card terminal chargeback dispute logged on Rosebank order. Awaiting EFT settlement proof.',
+    follow_up_at: '2026-11-14T12:00:00.000Z',
+    follow_up_done: false,
+    created_at: '2026-11-08T13:20:00.000Z',
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Affiliate codes & loyalty rules

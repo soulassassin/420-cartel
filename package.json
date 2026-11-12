@@ -35,6 +35,7 @@
     "ai": "^7.0.164",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "exceljs": "^4.4.0",
     "framer-motion": "11.15.0",
     "gsap": "^3.12.5",
     "lenis": "^1.1.18",

@@ -42,6 +42,26 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 );
 Input.displayName = 'Input';
 
+export const Select = React.forwardRef<
+  HTMLSelectElement,
+  React.SelectHTMLAttributes<HTMLSelectElement>
+>(({ className, children, ...props }, ref) => (
+  <select
+    ref={ref}
+    className={cn(
+      'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground ',
+      'focus:border-foreground focus:outline-none ',
+      'disabled:cursor-not-allowed disabled:opacity-40',
+      'aria-[invalid=true]:border-foreground',
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </select>
+));
+Select.displayName = 'Select';
+
 export const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>

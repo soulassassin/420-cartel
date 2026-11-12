@@ -22,8 +22,14 @@
 import type {
   AffiliateAttributionRow,
   AffiliateCodeRow,
+  BaseUom,
   BranchRow,
+  CartStockHoldRow,
+  CatalogueCategoryRow,
+  CrmInteractionChannel,
+  CrmInteractionRow,
   DeliveryZoneRow,
+  KycDocumentRow,
   LoyaltyLedgerRow,
   LoyaltyRulesRow,
   MasterBatchRow,
@@ -35,6 +41,7 @@ import type {
   PaymentRow,
   ProcessOrderPayload,
   ProcessOrderResult,
+  ProductCategory,
   ProductMediaJobRow,
   ProductRow,
   ProductStockLevelRow,
@@ -43,6 +50,7 @@ import type {
   StaffProfileRow,
   StockMovementRow,
   StockMovementType,
+  StrainType,
   BatchAllocationEntry,
 } from '@/types/database';
 import { roundBaseQty } from '@/lib/uom';
@@ -50,7 +58,9 @@ import {
   SEED_AFFILIATE_CODES,
   SEED_BATCHES,
   SEED_BRANCHES,
+  SEED_CRM_INTERACTIONS,
   SEED_DELIVERY_ZONES,
+  SEED_KYC_DOCUMENTS,
   SEED_LOYALTY_RULES,
   SEED_MEMBERS,
   SEED_PRODUCTS,
@@ -59,14 +69,19 @@ import {
 } from './fixtures';
 
 const STORAGE_KEY = 'cartel-local-db';
-const STORAGE_VERSION = 4;
+const STORAGE_VERSION = 5;
 
 export interface LocalDb {
   version: number;
   branches: BranchRow[];
   staff: StaffProfileRow[];
   members: MemberRow[];
+  kycDocuments: KycDocumentRow[];
+  interactions: CrmInteractionRow[];
+  cartHolds: CartStockHoldRow[];
   products: ProductRow[];
+  /** Optional so databases persisted before categories existed still load. */
+  categories?: CatalogueCategoryRow[];
   variants: ProductVariantRow[];
   batches: MasterBatchRow[];
   movements: StockMovementRow[];
@@ -89,6 +104,9 @@ function freshDb(): LocalDb {
     branches: structuredCloneSafe(SEED_BRANCHES),
     staff: structuredCloneSafe(SEED_STAFF),
     members: structuredCloneSafe(SEED_MEMBERS),
+    kycDocuments: structuredCloneSafe(SEED_KYC_DOCUMENTS),
+    interactions: structuredCloneSafe(SEED_CRM_INTERACTIONS),
+    cartHolds: [],
     products: structuredCloneSafe(SEED_PRODUCTS),
     variants: structuredCloneSafe(SEED_VARIANTS),
     batches: structuredCloneSafe(SEED_BATCHES),
@@ -123,6 +141,43 @@ function newId(): string {
 
 let cache: LocalDb | null = null;
 const listeners = new Set<() => void>();
+const SYNC_CHANNEL_NAME = 'cartel-local-db-sync';
+
+function getSyncChannel(): BroadcastChannel | null {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null;
+  try {
+    return new BroadcastChannel(SYNC_CHANNEL_NAME);
+  } catch {
+    return null;
+  }
+}
+
+let crossTabSubscribed = false;
+function ensureCrossTabSync(): void {
+  if (crossTabSubscribed || typeof window === 'undefined') return;
+  crossTabSubscribed = true;
+
+  const notifyFromExternal = () => {
+    cache = null;
+    load();
+    for (const listener of listeners) listener();
+  };
+
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      const rx = new BroadcastChannel(SYNC_CHANNEL_NAME);
+      rx.onmessage = () => notifyFromExternal();
+    } catch {
+      // Ignore if BroadcastChannel is unavailable in this environment.
+    }
+  }
+
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('storage', (event) => {
+      if (event.key === STORAGE_KEY) notifyFromExternal();
+    });
+  }
+}
 
 function load(): LocalDb {
   if (cache) return cache;
@@ -137,6 +192,7 @@ function load(): LocalDb {
       // A version bump means the fixtures changed — start clean rather than
       // merging a half-migrated shape.
       if (parsed.version === STORAGE_VERSION) {
+        if (!Array.isArray(parsed.cartHolds)) parsed.cartHolds = [];
         cache = parsed;
         return cache;
       }
@@ -149,10 +205,17 @@ function load(): LocalDb {
   return cache;
 }
 
-function persist(): void {
+function persist(broadcast = false): void {
   if (typeof window === 'undefined' || !cache) return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+    if (broadcast) {
+      const tx = getSyncChannel();
+      if (tx) {
+        tx.postMessage({ type: 'db-updated', at: Date.now() });
+        tx.close();
+      }
+    }
   } catch {
     // Private browsing or a full quota — the session still works in memory.
   }
@@ -161,12 +224,13 @@ function persist(): void {
 function commit<T>(mutate: (db: LocalDb) => T): T {
   const db = load();
   const result = mutate(db);
-  persist();
+  persist(true);
   for (const listener of listeners) listener();
   return result;
 }
 
 export function subscribeLocalDb(listener: () => void): () => void {
+  ensureCrossTabSync();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -178,7 +242,7 @@ export function readLocalDb(): LocalDb {
 /** Wipes the local preview database back to the seeded fixtures. */
 export function resetLocalDb(): void {
   cache = freshDb();
-  persist();
+  persist(true);
   for (const listener of listeners) listener();
 }
 
@@ -305,8 +369,12 @@ export function localCreateBatch(input: {
   createdBy?: string | null;
 }): MasterBatchRow {
   return commit((db) => {
-    if (db.batches.some((batch) => batch.batch_code === input.batchCode)) {
-      throw new LocalEngineError(`Batch code ${input.batchCode} is already in use.`);
+    if (
+      db.batches.some(
+        (batch) => batch.branch_id === input.branchId && batch.batch_code === input.batchCode,
+      )
+    ) {
+      throw new LocalEngineError(`Batch code ${input.batchCode} is already in use at this branch.`);
     }
     const product = db.products.find((candidate) => candidate.id === input.productId);
     if (!product) throw new LocalEngineError('Pick a product for this batch.');
@@ -364,6 +432,399 @@ export function localCreateBatch(input: {
   });
 }
 
+export interface LocalCreateProductInput {
+  sku: string;
+  name: string;
+  category: ProductCategory;
+  baseUom: BaseUom;
+  strain: StrainType;
+  shortTagline?: string | null;
+  thcPct?: number | null;
+  cbdPct?: number | null;
+  heroMediaUrl?: string | null;
+  variantLabel: string;
+  variantBaseQty: number;
+  variantPriceCents: number;
+  /** Shelf category (e.g. flower grade). */
+  categoryId?: string | null;
+  initialAllocation?: {
+    branchId: string;
+    quantity: number;
+    costPerBaseUnitCents: number;
+    lowStockThreshold?: number;
+    batchCode?: string;
+  } | null;
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue categories (flower grades and other shelf groupings)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_CATEGORY_NAMES = ['Greenhouse', 'Indoor', 'Hydro'];
+
+function ensureCategories(db: LocalDb): CatalogueCategoryRow[] {
+  if (!Array.isArray(db.categories)) {
+    const now = new Date().toISOString();
+    db.categories = DEFAULT_CATEGORY_NAMES.map((name, index) => ({
+      id: `local-category-${name.toLowerCase()}`,
+      name,
+      product_type: 'FLOWER' as ProductCategory,
+      sort_order: index + 1,
+      is_active: true,
+      created_at: now,
+    }));
+  }
+  return db.categories;
+}
+
+export function localListCategories(): CatalogueCategoryRow[] {
+  return structuredCloneSafe(
+    ensureCategories(load())
+      .filter((category) => category.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order),
+  );
+}
+
+export function localCreateCategory(
+  name: string,
+  productType: ProductCategory,
+): CatalogueCategoryRow {
+  return commit((db) => {
+    const categories = ensureCategories(db);
+    const trimmed = name.trim();
+    if (!trimmed) throw new LocalEngineError('Give the category a name.');
+    if (categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
+      throw new LocalEngineError(`A category named "${trimmed}" already exists.`);
+    }
+    const category: CatalogueCategoryRow = {
+      id: newId(),
+      name: trimmed,
+      product_type: productType,
+      sort_order: categories.reduce((max, c) => Math.max(max, c.sort_order), 0) + 1,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    categories.push(category);
+    return structuredCloneSafe(category);
+  });
+}
+
+/** Removes a category; its products stay, uncategorised. */
+export function localDeleteCategory(categoryId: string): void {
+  commit((db) => {
+    db.categories = ensureCategories(db).filter((c) => c.id !== categoryId);
+    for (const product of db.products) {
+      if (product.category_id === categoryId) product.category_id = null;
+    }
+  });
+}
+
+export function localSetProductCategory(productId: string, categoryId: string | null): void {
+  commit((db) => {
+    const product = db.products.find((p) => p.id === productId);
+    if (!product) throw new LocalEngineError('Product not found.');
+    product.category_id = categoryId;
+    product.updated_at = new Date().toISOString();
+  });
+}
+
+function slugifyProductName(name: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || `product-${Date.now()}`;
+}
+
+export function localCreateProduct(input: LocalCreateProductInput): ProductRow {
+  return commit((db) => {
+    const sku = input.sku.trim().toUpperCase();
+    const name = input.name.trim();
+    if (!sku || !name) {
+      throw new LocalEngineError('Product SKU and name are required.');
+    }
+    if (db.products.some((p) => p.sku.toLowerCase() === sku.toLowerCase())) {
+      throw new LocalEngineError(`SKU ${sku} is already in use.`);
+    }
+    if (input.variantBaseQty <= 0) {
+      throw new LocalEngineError('Default tier base quantity must be greater than zero.');
+    }
+    if (input.variantPriceCents < 0) {
+      throw new LocalEngineError('Selling price cannot be negative.');
+    }
+
+    const baseSlug = slugifyProductName(name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (db.products.some((p) => p.slug.toLowerCase() === slug.toLowerCase())) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
+    const now = new Date().toISOString();
+    const productId = newId();
+    const product: ProductRow = {
+      id: productId,
+      sku,
+      name,
+      slug,
+      category: input.category,
+      base_uom: input.baseUom,
+      strain: input.strain,
+      short_tagline: input.shortTagline?.trim() || null,
+      description: null,
+      brand: '420 Cartel',
+      thc_pct: input.thcPct ?? null,
+      cbd_pct: input.cbdPct ?? null,
+      terpene_tags: [],
+      extraction_purity_pct: null,
+      category_id: input.categoryId ?? null,
+      is_active: true,
+      is_member_only: false,
+      is_featured: false,
+      sort_order: db.products.length + 1,
+      hero_media_url: input.heroMediaUrl?.trim() || null,
+      gallery: [],
+      model_glb_url: null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const variant: ProductVariantRow = {
+      id: newId(),
+      product_id: productId,
+      label: input.variantLabel.trim() || 'Standard',
+      base_quantity: roundBaseQty(input.variantBaseQty, input.baseUom),
+      price_cents: Math.round(input.variantPriceCents),
+      compare_at_cents: null,
+      barcode: null,
+      is_active: true,
+      is_custom_amount: false,
+      pos_quick_key: true,
+      sort_order: 1,
+      created_at: now,
+      updated_at: now,
+    };
+
+    db.products.push(product);
+    db.variants.push(variant);
+
+    // Weighed and poured products also get an open tier, so the till can sell
+    // any typed amount at the per-unit rate of the default tier.
+    if (input.baseUom !== 'UNITS' && input.variantBaseQty > 0) {
+      db.variants.push({
+        ...variant,
+        id: newId(),
+        label: input.baseUom === 'GRAMS' ? 'Custom g' : 'Custom ml',
+        base_quantity: input.baseUom === 'GRAMS' ? 0.1 : 1,
+        price_cents: Math.round(input.variantPriceCents / input.variantBaseQty),
+        is_custom_amount: true,
+        pos_quick_key: false,
+        sort_order: 99,
+      });
+    }
+
+    const alloc = input.initialAllocation;
+    if (alloc && alloc.quantity > 0) {
+      const branch = db.branches.find((b) => b.id === alloc.branchId);
+      if (!branch) throw new LocalEngineError('Select a valid branch for initial stock.');
+
+      const qty = roundBaseQty(alloc.quantity, input.baseUom);
+      const batchCode = (
+        alloc.batchCode?.trim() || `${sku}-${Date.now().toString(36).slice(-4)}`
+      ).toUpperCase();
+
+      const batch: MasterBatchRow = {
+        id: newId(),
+        product_id: productId,
+        branch_id: alloc.branchId,
+        batch_code: batchCode,
+        harvest_date: now.slice(0, 10),
+        production_date: now.slice(0, 10),
+        expiry_date: null,
+        lab_thc_pct: input.thcPct ?? null,
+        lab_cbd_pct: input.cbdPct ?? null,
+        lab_report_url: null,
+        terpene_profile: {},
+        cost_per_base_unit_cents: Math.max(0, Math.round(alloc.costPerBaseUnitCents)),
+        received_base_qty: qty,
+        remaining_base_qty: qty,
+        reserved_base_qty: 0,
+        low_stock_threshold: Math.max(0, alloc.lowStockThreshold ?? 10),
+        is_active: true,
+        received_at: now,
+        created_by: null,
+        created_at: now,
+        updated_at: now,
+        higgsfield_job_id: null,
+        higgsfield_promo_video_url: null,
+        higgsfield_poster_url: null,
+        higgsfield_generated_at: null,
+      };
+      db.batches.push(batch);
+      db.movements.unshift({
+        id: newId(),
+        master_batch_id: batch.id,
+        product_id: productId,
+        branch_id: alloc.branchId,
+        movement_type: 'INTAKE',
+        base_uom: input.baseUom,
+        base_qty_delta: qty,
+        balance_after: qty,
+        unit_cost_cents: batch.cost_per_base_unit_cents,
+        order_id: null,
+        performed_by: null,
+        reason: 'Initial product branch allocation',
+        metadata: {},
+        created_at: now,
+      });
+    }
+
+    return structuredCloneSafe(product);
+  });
+}
+
+export function localDeleteProduct(productId: string): { deleted: boolean; archived: boolean } {
+  return commit((db) => {
+    const product = db.products.find((p) => p.id === productId);
+    if (!product) throw new LocalEngineError('Product not found.');
+
+    const hasHistory =
+      db.orderItems.some((item) => item.product_id === productId) ||
+      db.movements.some((m) => m.product_id === productId);
+
+    const now = new Date().toISOString();
+    if (hasHistory) {
+      product.is_active = false;
+      product.updated_at = now;
+      for (const v of db.variants) {
+        if (v.product_id === productId) {
+          v.is_active = false;
+          v.updated_at = now;
+        }
+      }
+      for (const b of db.batches) {
+        if (b.product_id === productId) {
+          b.is_active = false;
+          b.updated_at = now;
+        }
+      }
+      return { deleted: false, archived: true };
+    }
+
+    db.products = db.products.filter((p) => p.id !== productId);
+    db.variants = db.variants.filter((v) => v.product_id !== productId);
+    db.batches = db.batches.filter((b) => b.product_id !== productId);
+    return { deleted: true, archived: false };
+  });
+}
+
+export function localTransferBatchStock(input: {
+  sourceBatchId: string;
+  targetBranchId: string;
+  baseQty: number;
+  reason?: string;
+}): MasterBatchRow {
+  return commit((db) => {
+    const sourceBatch = db.batches.find((b) => b.id === input.sourceBatchId);
+    if (!sourceBatch) throw new LocalEngineError('Source batch no longer exists.');
+    if (sourceBatch.branch_id === input.targetBranchId) {
+      throw new LocalEngineError('Choose a different destination branch for transfer.');
+    }
+
+    const targetBranch = db.branches.find((b) => b.id === input.targetBranchId);
+    if (!targetBranch) throw new LocalEngineError('Destination branch not found.');
+
+    const product = db.products.find((p) => p.id === sourceBatch.product_id);
+    if (!product) throw new LocalEngineError('Parent product not found.');
+
+    const qty = roundBaseQty(Math.abs(input.baseQty), product.base_uom);
+    if (qty <= 0) throw new LocalEngineError('Transfer quantity must be greater than zero.');
+
+    const available = roundBaseQty(
+      sourceBatch.remaining_base_qty - sourceBatch.reserved_base_qty,
+      product.base_uom,
+    );
+    if (qty > available) {
+      throw new LocalEngineError(
+        `${sourceBatch.batch_code} only has ${available} available to transfer.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const nextSourceBalance = roundBaseQty(sourceBatch.remaining_base_qty - qty, product.base_uom);
+    sourceBatch.remaining_base_qty = nextSourceBalance;
+    sourceBatch.updated_at = now;
+
+    db.movements.unshift({
+      id: newId(),
+      master_batch_id: sourceBatch.id,
+      product_id: sourceBatch.product_id,
+      branch_id: sourceBatch.branch_id,
+      movement_type: 'TRANSFER_OUT',
+      base_uom: product.base_uom,
+      base_qty_delta: -qty,
+      balance_after: nextSourceBalance,
+      unit_cost_cents: sourceBatch.cost_per_base_unit_cents,
+      order_id: null,
+      performed_by: null,
+      reason: input.reason?.trim() || `Transferred to ${targetBranch.name}`,
+      metadata: { target_branch_id: targetBranch.id },
+      created_at: now,
+    });
+
+    // Credit an existing active batch with the same batch_code at destination, or create a new one.
+    let destBatch = db.batches.find(
+      (b) =>
+        b.branch_id === targetBranch.id &&
+        b.product_id === sourceBatch.product_id &&
+        b.batch_code === sourceBatch.batch_code &&
+        b.is_active,
+    );
+
+    if (destBatch) {
+      destBatch.received_base_qty = roundBaseQty(destBatch.received_base_qty + qty, product.base_uom);
+      destBatch.remaining_base_qty = roundBaseQty(
+        destBatch.remaining_base_qty + qty,
+        product.base_uom,
+      );
+      destBatch.updated_at = now;
+    } else {
+      destBatch = {
+        ...structuredCloneSafe(sourceBatch),
+        id: newId(),
+        branch_id: targetBranch.id,
+        received_base_qty: qty,
+        remaining_base_qty: qty,
+        reserved_base_qty: 0,
+        received_at: now,
+        created_at: now,
+        updated_at: now,
+      };
+      db.batches.push(destBatch);
+    }
+
+    db.movements.unshift({
+      id: newId(),
+      master_batch_id: destBatch.id,
+      product_id: destBatch.product_id,
+      branch_id: targetBranch.id,
+      movement_type: 'TRANSFER_IN',
+      base_uom: product.base_uom,
+      base_qty_delta: qty,
+      balance_after: destBatch.remaining_base_qty,
+      unit_cost_cents: destBatch.cost_per_base_unit_cents,
+      order_id: null,
+      performed_by: null,
+      reason: input.reason?.trim() || `Transfer from source batch ${sourceBatch.batch_code}`,
+      metadata: { source_branch_id: sourceBatch.branch_id },
+      created_at: now,
+    });
+
+    return structuredCloneSafe(destBatch);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Members
 // ---------------------------------------------------------------------------
@@ -401,6 +862,8 @@ export interface LocalCreateMemberInput {
   marketingOptIn?: boolean;
   homeBranchId?: string | null;
   referredByCode?: string | null;
+  crmTags?: string[];
+  internalNotes?: string | null;
   /** Walk-ins rung up at the till are approved on the spot by the cashier. */
   autoApprove?: boolean;
 }
@@ -453,7 +916,8 @@ export function localCreateMember(input: LocalCreateMemberInput): MemberRow {
       referral_code: code,
       referred_by_code: input.referredByCode ?? null,
       suspended_reason: null,
-      internal_notes: null,
+      internal_notes: input.internalNotes?.trim() || null,
+      crm_tags: input.crmTags ?? [],
       last_seen_at: now,
       created_at: now,
       updated_at: now,
@@ -544,6 +1008,268 @@ export function localAdjustMemberCredit(
 
     return structuredCloneSafe(member);
   });
+}
+
+export interface LocalUpdateMemberCrmPatch {
+  homeBranchId?: string | null;
+  preferredUom?: BaseUom;
+  marketingOptIn?: boolean;
+  email?: string;
+  phone?: string;
+  internalNotes?: string | null;
+  crmTags?: string[];
+}
+
+export function localUpdateMemberCrmProfile(
+  memberId: string,
+  patch: LocalUpdateMemberCrmPatch,
+): MemberRow {
+  return commit((db) => {
+    const member = db.members.find((candidate) => candidate.id === memberId);
+    if (!member) throw new LocalEngineError('Member record not found.');
+
+    if (patch.homeBranchId !== undefined) member.home_branch_id = patch.homeBranchId;
+    if (patch.preferredUom !== undefined) member.preferred_uom = patch.preferredUom;
+    if (patch.marketingOptIn !== undefined) member.marketing_opt_in = patch.marketingOptIn;
+    if (patch.email !== undefined) member.email = patch.email.trim();
+    if (patch.phone !== undefined) member.phone = patch.phone.trim();
+    if (patch.internalNotes !== undefined) {
+      member.internal_notes = patch.internalNotes?.trim() || null;
+    }
+    if (patch.crmTags !== undefined) {
+      member.crm_tags = Array.from(
+        new Set(patch.crmTags.map((t) => t.trim().toUpperCase().replace(/\s+/g, '_')).filter(Boolean)),
+      );
+    }
+    member.updated_at = new Date().toISOString();
+
+    return structuredCloneSafe(member);
+  });
+}
+
+export function localReviewMemberKyc(
+  memberId: string,
+  approve: boolean,
+  reason?: string | null,
+): MemberRow {
+  return commit((db) => {
+    const member = db.members.find((candidate) => candidate.id === memberId);
+    if (!member) throw new LocalEngineError('Member record not found.');
+
+    if (!approve && (!reason || reason.trim().length < 4)) {
+      throw new LocalEngineError('Provide a rejection reason (minimum 4 characters).');
+    }
+
+    const now = new Date().toISOString();
+    const docs = db.kycDocuments.filter((doc) => doc.member_id === memberId);
+
+    if (approve) {
+      member.status = 'ACTIVE_MEMBER';
+      member.age_verified_at = member.age_verified_at ?? now;
+      member.kyc_approved_at = now;
+      member.agreement_signed_at = member.agreement_signed_at ?? now;
+      member.agreement_version = member.agreement_version ?? '2026.1';
+      member.suspended_reason = null;
+      for (const doc of docs) {
+        doc.review_status = 'APPROVED';
+        doc.reviewed_at = now;
+        doc.rejection_reason = null;
+      }
+      db.interactions.unshift({
+        id: newId(),
+        member_id: memberId,
+        branch_id: member.home_branch_id,
+        staff_id: null,
+        channel: 'COMPLIANCE',
+        summary: 'KYC approved and 18+ compliance cleared.',
+        follow_up_at: null,
+        follow_up_done: true,
+        created_at: now,
+      });
+    } else {
+      member.status = 'PENDING_KYC';
+      member.kyc_approved_at = null;
+      for (const doc of docs) {
+        doc.review_status = 'REJECTED';
+        doc.reviewed_at = now;
+        doc.rejection_reason = reason!.trim();
+      }
+      db.interactions.unshift({
+        id: newId(),
+        member_id: memberId,
+        branch_id: member.home_branch_id,
+        staff_id: null,
+        channel: 'COMPLIANCE',
+        summary: `KYC rejected: ${reason!.trim()}`,
+        follow_up_at: null,
+        follow_up_done: false,
+        created_at: now,
+      });
+    }
+
+    member.updated_at = now;
+    return structuredCloneSafe(member);
+  });
+}
+
+export function localRotateMemberQrToken(memberId: string): string {
+  return commit((db) => {
+    const member = db.members.find((candidate) => candidate.id === memberId);
+    if (!member) throw new LocalEngineError('Member record not found.');
+    const token = newId();
+    member.qr_token = token;
+    member.updated_at = new Date().toISOString();
+    return token;
+  });
+}
+
+export function localAddCrmInteraction(input: {
+  memberId: string;
+  branchId?: string | null;
+  channel: CrmInteractionChannel;
+  summary: string;
+  followUpAt?: string | null;
+}): CrmInteractionRow {
+  return commit((db) => {
+    const member = db.members.find((candidate) => candidate.id === input.memberId);
+    if (!member) throw new LocalEngineError('Member record not found.');
+    const summary = input.summary.trim();
+    if (summary.length < 3) {
+      throw new LocalEngineError('Interaction note must be at least 3 characters.');
+    }
+    const now = new Date().toISOString();
+    const row: CrmInteractionRow = {
+      id: newId(),
+      member_id: input.memberId,
+      branch_id: input.branchId ?? member.home_branch_id ?? null,
+      staff_id: null,
+      channel: input.channel,
+      summary,
+      follow_up_at: input.followUpAt || null,
+      follow_up_done: false,
+      created_at: now,
+    };
+    db.interactions.unshift(row);
+    member.last_seen_at = now;
+    member.updated_at = now;
+    return structuredCloneSafe(row);
+  });
+}
+
+export function localToggleCrmFollowUp(
+  interactionId: string,
+  done: boolean,
+): CrmInteractionRow {
+  return commit((db) => {
+    const row = db.interactions.find((candidate) => candidate.id === interactionId);
+    if (!row) throw new LocalEngineError('CRM interaction not found.');
+    row.follow_up_done = done;
+    return structuredCloneSafe(row);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Real-time Cart Stock Reservations (multi-branch FIFO hold sync)
+// ---------------------------------------------------------------------------
+
+const CART_HOLD_TTL_MS = 30 * 60 * 1000;
+
+function recomputeBranchProductReservations(
+  db: LocalDb,
+  branchId: string,
+  productId: string,
+  nowIso: string,
+): void {
+  const product = db.products.find((p) => p.id === productId);
+  const uom = product?.base_uom ?? 'GRAMS';
+
+  let heldRemaining = roundBaseQty(
+    db.cartHolds
+      .filter(
+        (h) =>
+          h.branch_id === branchId &&
+          h.product_id === productId &&
+          h.expires_at > nowIso,
+      )
+      .reduce((sum, h) => sum + h.base_qty, 0),
+    uom,
+  );
+
+  const batches = db.batches
+    .filter((b) => b.branch_id === branchId && b.product_id === productId && b.is_active)
+    .sort((a, b) => a.received_at.localeCompare(b.received_at));
+
+  for (const batch of batches) {
+    const take = roundBaseQty(Math.min(Math.max(heldRemaining, 0), batch.remaining_base_qty), uom);
+    if (batch.reserved_base_qty !== take) {
+      batch.reserved_base_qty = take;
+      batch.updated_at = nowIso;
+    }
+    heldRemaining = roundBaseQty(Math.max(0, heldRemaining - take), uom);
+  }
+}
+
+export function localSyncCartHolds(input: {
+  cartSessionId: string;
+  branchId: string;
+  items: { productId: string; baseQty: number }[];
+  memberLabel?: string | null;
+}): CartStockHoldRow[] {
+  return commit((db) => {
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
+    const expiresAt = new Date(nowMs + CART_HOLD_TTL_MS).toISOString();
+
+    const affectedPairs = new Set<string>();
+    for (const hold of db.cartHolds) {
+      if (hold.cart_session_id === input.cartSessionId || hold.expires_at <= nowIso) {
+        affectedPairs.add(`${hold.branch_id}:${hold.product_id}`);
+      }
+    }
+
+    // Purge expired holds and clear prior holds belonging to this cart session
+    db.cartHolds = db.cartHolds.filter(
+      (hold) => hold.cart_session_id !== input.cartSessionId && hold.expires_at > nowIso,
+    );
+
+    const inserted: CartStockHoldRow[] = [];
+    for (const item of input.items) {
+      const product = db.products.find((p) => p.id === item.productId);
+      const uom = product?.base_uom ?? 'GRAMS';
+      const qty = roundBaseQty(item.baseQty, uom);
+      if (!product || qty <= 0 || !input.branchId) continue;
+
+      const row: CartStockHoldRow = {
+        id: newId(),
+        cart_session_id: input.cartSessionId,
+        branch_id: input.branchId,
+        product_id: item.productId,
+        quantity: Math.max(1, Math.ceil(qty)),
+        base_qty: qty,
+        member_label: input.memberLabel?.trim() || null,
+        expires_at: expiresAt,
+        created_at: nowIso,
+      };
+      db.cartHolds.push(row);
+      inserted.push(structuredCloneSafe(row));
+      affectedPairs.add(`${input.branchId}:${item.productId}`);
+    }
+
+    for (const pair of affectedPairs) {
+      const [bId, pId] = pair.split(':');
+      if (bId && pId) recomputeBranchProductReservations(db, bId, pId, nowIso);
+    }
+
+    return inserted;
+  });
+}
+
+export function localListActiveCartHolds(branchId?: string): CartStockHoldRow[] {
+  const db = load();
+  const nowIso = new Date().toISOString();
+  return db.cartHolds
+    .filter((h) => h.expires_at > nowIso && (!branchId || h.branch_id === branchId))
+    .map((h) => structuredCloneSafe(h));
 }
 
 /** Mirror of `lookup_member_for_pos` — code, QR token, phone, ID or name. */
@@ -844,6 +1570,10 @@ export function localProcessOrder(payload: ProcessOrderPayload): ProcessOrderRes
 
         batch.remaining_base_qty = roundBaseQty(
           batch.remaining_base_qty - take,
+          line.product.base_uom,
+        );
+        batch.reserved_base_qty = roundBaseQty(
+          Math.min(batch.remaining_base_qty, Math.max(0, batch.reserved_base_qty - take)),
           line.product.base_uom,
         );
         batch.updated_at = now;

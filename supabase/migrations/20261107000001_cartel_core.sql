@@ -3,7 +3,7 @@
 -- Multi-unit (g / ml / ea) inventory, private-club CRM, POS + online orders
 -- =====================================================================
 
-create extension if not exists "pgcrypto";
+create extension if not exists "pgcrypto" with schema extensions;
 create extension if not exists "citext";
 
 -- ---------------------------------------------------------------------
@@ -322,7 +322,7 @@ create table public.members (
   points_balance           bigint not null default 0 check (points_balance >= 0),
 
   referral_code            text not null unique
-                             default 'CARTEL-' || upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 6)),
+                             default 'CARTEL-' || upper(substr(encode(extensions.gen_random_bytes(4), 'hex'), 1, 6)),
   referred_by_code         text,
 
   suspended_reason         text,

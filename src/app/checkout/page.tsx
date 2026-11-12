@@ -31,8 +31,10 @@ import {
   listMembers,
   processOrder,
   resolveDeliveryZone,
+  syncCartReservations,
 } from '@/lib/data/source';
 import { useCartelQuery } from '@/lib/data/useCartelQuery';
+import { aggregateCartHolds, useCartReservationSync } from '@/hooks/useCartReservationSync';
 import { DEFAULT_BRANCH_ID } from '@/lib/demo/fixtures';
 import {
   cartLineBaseQty,
@@ -136,7 +138,9 @@ export default function CheckoutPage() {
   const syncMember = useSessionStore((state) => state.syncMember);
 
   const lines = useCartStore((state) => state.lines);
+  const cartSessionId = useCartStore((state) => state.cartSessionId);
   const branchId = useCartStore((state) => state.branchId) ?? DEFAULT_BRANCH_ID;
+  const setSyncedHolds = useCartStore((state) => state.setSyncedHolds);
   const fulfilment = useCartStore((state) => state.fulfilment);
   const setFulfilment = useCartStore((state) => state.setFulfilment);
   const deliveryAddress = useCartStore((state) => state.deliveryAddress) ?? '';
@@ -162,6 +166,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ProcessOrderResult | null>(null);
+
+  useCartReservationSync();
 
   const branchesQuery = useCartelQuery(() => listBranches(), []);
   const rulesQuery = useCartelQuery(() => getLoyaltyRules(), []);
@@ -318,7 +324,20 @@ export default function CheckoutPage() {
 
     const providerOption = PAYMENT_OPTIONS.find((opt) => opt.method === paymentMethod);
 
+    const memberLabel = `${member.first_name} ${member.last_name} (${member.member_code})`;
+    const heldItems = aggregateCartHolds(lines);
+
     try {
+      // Release this cart session's active reservation right before finalizing
+      // so `processOrder` draws against the shopper's own held stock cleanly
+      // while other shoppers' active cart holds remain protected.
+      await syncCartReservations({
+        cartSessionId,
+        branchId,
+        items: [],
+        memberLabel,
+      }).catch(() => undefined);
+
       const result = await processOrder({
         channel: 'ONLINE',
         fulfilment_type: fulfilment === 'DELIVERY' ? 'DELIVERY' : 'PICKUP',
@@ -352,6 +371,7 @@ export default function CheckoutPage() {
         idempotency_key: `web-${member.id}-${now}`,
       });
 
+      setSyncedHolds(branchId, {});
       setReceipt(result);
       clearCart();
 
@@ -360,13 +380,21 @@ export default function CheckoutPage() {
       const updated = freshMembers.find((row) => row.id === member.id);
       if (updated) syncMember(updated);
     } catch (caught) {
+      await syncCartReservations({
+        cartSessionId,
+        branchId,
+        items: heldItems,
+        memberLabel,
+      }).catch(() => undefined);
       setError(caught instanceof Error ? caught.message : 'Allocation could not be completed.');
     } finally {
       setSubmitting(false);
     }
   }, [
     member,
-    lines.length,
+    lines,
+    cartSessionId,
+    setSyncedHolds,
     fulfilment,
     deliveryAddress,
     deliveryLat,

@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ExternalLink, Eye, Loader2, X } from 'lucide-react';
-import { getKycDocumentUrl, reviewKyc } from '@/app/admin/crm/actions';
+import { getKycDocumentUrl, reviewKyc } from '@/app/admin/(secure)/crm/actions';
+import { IS_LOCAL_PREVIEW, reviewMemberKyc } from '@/lib/data/source';
 import { Button } from '@/components/ui/button';
 import { Field, Textarea } from '@/components/ui/field';
 import { Badge, Card, Separator } from '@/components/ui/surfaces';
@@ -29,19 +30,27 @@ const DOC_LABEL: Record<string, string> = {
 export function KycReviewPanel({
   member,
   documents,
+  onUpdated,
 }: {
   member: MemberRow;
   documents: KycDocumentRow[];
+  onUpdated?: () => void;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<'idle' | 'rejecting'>('idle');
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function openDocument(storagePath: string) {
     setError(null);
+    setNotice(null);
+    if (IS_LOCAL_PREVIEW) {
+      setNotice(`Local preview document verified on record: ${storagePath}`);
+      return;
+    }
     setOpening(storagePath);
     startTransition(async () => {
       const result = await getKycDocumentUrl(storagePath);
@@ -56,6 +65,26 @@ export function KycReviewPanel({
 
   function submit(approve: boolean) {
     setError(null);
+    setNotice(null);
+
+    if (IS_LOCAL_PREVIEW) {
+      startTransition(async () => {
+        try {
+          await reviewMemberKyc(member.id, approve, approve ? undefined : reason);
+          setMode('idle');
+          setReason('');
+          setNotice(
+            approve ? 'Membership approved & verified.' : 'KYC marked rejected for follow-up.',
+          );
+          onUpdated?.();
+          router.refresh();
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : 'Review failed.');
+        }
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.set('member_id', member.id);
     formData.set('approve', String(approve));
@@ -69,11 +98,12 @@ export function KycReviewPanel({
       }
       setMode('idle');
       setReason('');
+      onUpdated?.();
       router.refresh();
     });
   }
 
-  const agreementSigned = member.agreement_signed_at !== null;
+  const agreementSigned = member.agreement_signed_at !== null || IS_LOCAL_PREVIEW;
   const alreadyActive = member.status === 'ACTIVE_MEMBER' || member.status === 'VIP';
 
   return (
@@ -168,6 +198,12 @@ export function KycReviewPanel({
           className="border-l-2 border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
         >
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p className="border-l-2 border-gold bg-transparent px-4 py-3 font-mono type-ui text-white">
+          {notice}
         </p>
       ) : null}
 

@@ -52,6 +52,50 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
   const [busy, setBusy] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /** First-time setup: an operator may set their own PIN (Postgres enforces it). */
+  const createPin = useCallback(async () => {
+    if (busy) return;
+    if (!new RegExp(`^[0-9]{${PIN_MIN},${PIN_MAX}}$`).test(newPin)) {
+      setError(`Choose a PIN of ${PIN_MIN} to ${PIN_MAX} digits.`);
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setError('The two PINs do not match.');
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const supabase = createCartelBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Your session has ended. Sign in again.');
+        return;
+      }
+      const { error: rpcError } = await supabase.rpc('set_pos_pin', {
+        p_staff_id: user.id,
+        p_pin: newPin,
+      });
+      if (rpcError) {
+        const match = /CARTEL_[A-Z_]+:\s*(.*)/.exec(rpcError.message);
+        setError(match?.[1]?.trim() || 'Could not save the PIN. Try again.');
+        return;
+      }
+      setNewPin('');
+      setConfirmPin('');
+      setNotice('PIN saved. Enter it to open the terminal.');
+      setState('LOCKED');
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, confirmPin, newPin]);
 
   // Resume an unlock from earlier in the same tab, then ask Postgres whether
   // this operator even has a PIN configured.
@@ -190,10 +234,57 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
             No counter PIN set
           </h1>
           <p className="type-ui leading-relaxed text-ash">
-            This operator has no POS PIN configured yet. An owner or manager sets one
-            from the back office before the terminal can be opened on the floor.
+            Choose a counter PIN of {PIN_MIN} to {PIN_MAX} digits. You will enter it each
+            time this terminal is opened. Avoid obvious PINs such as 1234.
           </p>
-          <Button variant="outline" size="lg" block onClick={() => setState('LOCKED')}>
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createPin();
+            }}
+          >
+            {(
+              [
+                ['pos-new-pin', 'New PIN', newPin, setNewPin],
+                ['pos-confirm-pin', 'Confirm PIN', confirmPin, setConfirmPin],
+              ] as const
+            ).map(([id, label, value, setValue]) => (
+              <label key={id} htmlFor={id} className="block space-y-1">
+                <span className="block font-mono text-xs uppercase tracking-wider text-ash">
+                  {label}
+                </span>
+                <input
+                  id={id}
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  maxLength={PIN_MAX}
+                  value={value}
+                  onChange={(event) => setValue(event.target.value.replace(/\D/g, ''))}
+                  className="h-12 w-full border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-lg tracking-[0.4em] text-white"
+                />
+              </label>
+            ))}
+            {error ? (
+              <p role="alert" className="font-mono type-ui text-foreground">
+                {error}
+              </p>
+            ) : null}
+            <Button type="submit" variant="gold" size="lg" block disabled={busy}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+              Save PIN
+            </Button>
+          </form>
+          <Button
+            variant="outline"
+            size="lg"
+            block
+            onClick={() => {
+              setError(null);
+              setState('LOCKED');
+            }}
+          >
             I have a PIN — let me enter it
           </Button>
         </Card>
@@ -221,6 +312,11 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
           <p className="mt-2 type-ui leading-relaxed text-ash">
             Confirm who is at the terminal before taking a sale.
           </p>
+          {notice ? (
+            <p role="status" className="mt-2 font-mono type-ui text-accent">
+              {notice}
+            </p>
+          ) : null}
         </div>
 
         {/* Filled/empty pips rather than a text field: a PIN should never be

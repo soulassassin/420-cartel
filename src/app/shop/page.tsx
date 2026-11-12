@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
+  Building2,
   Check,
   Loader2,
   Lock,
@@ -29,8 +30,16 @@ import {
   tiersAvailable,
 } from '@/lib/uom';
 import { tierPriceCents, vipPriceCents, isVipStanding } from '@/lib/pricing';
-import { listCatalogue, listMembers, IS_LOCAL_PREVIEW, type CatalogueEntry } from '@/lib/data/source';
+import {
+  IS_LOCAL_PREVIEW,
+  listBranches,
+  listCatalogue,
+  listMembers,
+  subscribeToData,
+  type CatalogueEntry,
+} from '@/lib/data/source';
 import { useCartelQuery } from '@/lib/data/useCartelQuery';
+import { useCartReservationSync } from '@/hooks/useCartReservationSync';
 import { DEFAULT_BRANCH_ID } from '@/lib/demo/fixtures';
 import {
   cartLineBaseQty,
@@ -87,7 +96,15 @@ export default function ShopPage() {
     if (!useCartStore.getState().branchId) setBranch(DEFAULT_BRANCH_ID);
   }, [setBranch]);
 
+  useCartReservationSync();
+
+  const branchesQuery = useCartelQuery(() => listBranches(), []);
+  const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data]);
   const catalogue = useCartelQuery(() => listCatalogue(branchId), [branchId]);
+
+  useEffect(() => {
+    return subscribeToData(() => catalogue.refresh());
+  }, [catalogue]);
 
   /**
    * Live stock for this branch.
@@ -164,7 +181,28 @@ export default function ShopPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {branches.length > 0 ? (
+              <label className="flex items-center gap-2 border border-[color:var(--border-subtle)] bg-surface px-3 py-2.5 font-mono type-ui text-white">
+                <Building2 className="size-4 text-gold" />
+                <select
+                  aria-label="Fulfilling Dispensary Branch"
+                  value={branchId}
+                  onChange={(e) => {
+                    setNotice(null);
+                    setBranch(e.target.value);
+                  }}
+                  className="bg-transparent font-mono type-ui text-white focus:outline-none"
+                >
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id} className="bg-surface text-white">
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             {member ? (
               <Card className="flex items-center gap-3 px-4 py-2.5">
                 <ShieldCheck className="size-4 text-foreground" />
@@ -326,6 +364,8 @@ function ProductCard({
   const member = useSessionStore((state) => state.member);
   const addLine = useCartStore((state) => state.addLine);
   const lines = useCartStore((state) => state.lines);
+  const syncedBranchId = useCartStore((state) => state.syncedBranchId);
+  const syncedHolds = useCartStore((state) => state.syncedHolds);
 
   const sellable = variants.filter((variant) => !variant.is_custom_amount);
   const [selectedId, setSelectedId] = useState<string | null>(sellable[1]?.id ?? sellable[0]?.id ?? null);
@@ -333,7 +373,8 @@ function ProductCard({
 
   const leadBatch = batches.find((batch) => batch.remaining_base_qty > 0) ?? batches[0] ?? null;
   const committed = cartProductBaseQty(lines, product.id);
-  const headroom = roundBaseQty(availableBaseQty - committed, product.base_uom);
+  const ownHeld = syncedBranchId === stock.branch_id ? (syncedHolds[product.id] ?? 0) : 0;
+  const headroom = roundBaseQty(availableBaseQty + ownHeld - committed, product.base_uom);
 
   const add = useCallback(
     (variant: ProductVariantRow) => {

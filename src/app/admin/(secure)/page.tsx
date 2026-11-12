@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { ArrowRight, Boxes, ScanLine, Trophy, Users } from 'lucide-react';
 import { Card, Eyebrow } from '@/components/ui/surfaces';
@@ -6,10 +6,10 @@ import { Card, Eyebrow } from '@/components/ui/surfaces';
 const MODULES = [
   {
     index: '01',
-    title: 'Inventory & Higgsfield AI',
+    title: 'Vault Inventory',
     href: '/admin/inventory',
     description:
-      'Multi-UOM master batch balances (g, ml, units), immutable FIFO movement ledger, and 9:16 Higgsfield AI promo video studio.',
+      'Multi-UOM master batch balances (g, ml, units) and immutable FIFO movement ledger.',
     icon: Boxes,
   },
   {
@@ -31,7 +31,7 @@ const MODULES = [
   {
     index: '04',
     title: 'Sandton Vault POS Terminal',
-    href: '/pos',
+    href: '/admin/pos',
     description:
       'Counter touch terminal with QR pass lookup, 60-second walk-in registration, custom scale calculator, and 80mm receipt printer.',
     icon: ScanLine,
@@ -43,15 +43,7 @@ export default function AdminHubPage() {
     <main className="min-h-screen bg-void pb-28 pt-14">
       <div className="container max-w-5xl">
         <div className="flex items-center gap-4">
-          <div className="relative size-12 shrink-0 overflow-hidden rounded-full border border-foreground/30 bg-black">
-            <Image
-              src="/fourtwentycartel_logo.jpg"
-              alt="420 Cartel Logo"
-              width={48}
-              height={48}
-              className="size-full object-cover"
-            />
-          </div>
+          <BrandLogo priority />
           <div>
             <Eyebrow>Back Office Command</Eyebrow>
             <h1 className="mt-1 display-md text-white">

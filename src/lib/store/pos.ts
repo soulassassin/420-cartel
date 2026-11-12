@@ -9,14 +9,19 @@ import type {
   ProcessOrderItemInput,
   ProductCategory,
 } from '@/types/database';
+import type {
+  PosFulfillmentType,
+  PosModifierOption,
+  PosAffiliateContext,
+  PosVolumeTier,
+  PosCalculationResult,
+} from '@/types/pos-engine';
+import { calculatePosCart } from '@/lib/pos/calculation-engine';
 import { roundBaseQty } from '@/lib/uom';
 
 /**
- * POS terminal state.
- *
- * The active till (branch + terminal label + cashier) is persisted so a tablet
- * that sleeps or reloads comes back on the same till. The open ticket is
- * persisted too, so a dropped tablet does not lose a half-rung sale.
+ * Enterprise POS Terminal State with Multi-Branch, Fulfillment Routing,
+ * Multi-Tier Affiliates, Dynamic Modifiers, and Volume Tiers.
  */
 
 export interface PosTicketLine {
@@ -31,6 +36,12 @@ export interface PosTicketLine {
   customBaseQty: number | null;
   quantity: number;
   unitPriceCents: number;
+  branchOverridePriceCents?: number;
+  costPriceCents?: number;
+  volumeTiers?: PosVolumeTier[];
+  selectedModifiers: PosModifierOption[];
+  lineDiscountCents?: number;
+  affiliateEligible?: boolean;
 }
 
 export interface PosTenderLine {
@@ -42,13 +53,22 @@ export interface PosTenderLine {
 }
 
 export interface PosState {
-  // Terminal identity
+  // Terminal Identity & Branch Context
   branchId: string | null;
   terminalLabel: string;
   staffId: string | null;
   staffName: string | null;
+  taxRateBps: number; // e.g. 1500 for 15% VAT
 
-  // Open ticket
+  // Fulfillment Context
+  fulfillmentType: PosFulfillmentType;
+  deliveryZoneFeeCents: number;
+  deliveryAddress: string | null;
+
+  // Affiliate Attribution Context
+  activeAffiliate: PosAffiliateContext | null;
+
+  // Open Ticket
   lines: PosTicketLine[];
   member: PosMemberLookupRow | null;
   discountCents: number;
@@ -56,24 +76,29 @@ export interface PosState {
   tender: PosTenderLine[];
   note: string;
 
-  // UI
+  // UI & Live Inventory Locks
   activeCategory: ProductCategory | 'ALL';
   searchTerm: string;
-  /** Batch-level stock locks observed over Realtime, keyed by product id. */
   stockLocks: Record<string, number>;
 
+  // Actions
   setTerminal: (input: {
     branchId: string;
     terminalLabel: string;
     staffId: string;
     staffName: string;
+    taxRateBps?: number;
   }) => void;
   clearTerminal: () => void;
 
-  addLine: (line: Omit<PosTicketLine, 'key'>) => void
+  setFulfillment: (type: PosFulfillmentType, zoneFeeCents?: number, address?: string | null) => void;
+  setAffiliate: (affiliate: PosAffiliateContext | null) => void;
+
+  addLine: (line: Omit<PosTicketLine, 'key' | 'selectedModifiers'> & { selectedModifiers?: PosModifierOption[] }) => void;
   bumpLine: (key: string, delta: number) => void;
   setLineQuantity: (key: string, quantity: number) => void;
   removeLine: (key: string) => void;
+  updateLineModifiers: (key: string, modifiers: PosModifierOption[]) => void;
 
   attachMember: (member: PosMemberLookupRow | null) => void;
   setDiscountCents: (cents: number) => void;
@@ -91,8 +116,13 @@ export interface PosState {
   voidTicket: () => void;
 }
 
-function ticketKey(variantId: string, customBaseQty: number | null): string {
-  return customBaseQty === null ? variantId : `${variantId}@${customBaseQty}`;
+function ticketKey(variantId: string, customBaseQty: number | null, modifiers: PosModifierOption[] = []): string {
+  const modKey = modifiers
+    .map((m) => m.id)
+    .sort()
+    .join('-');
+  const base = customBaseQty === null ? variantId : `${variantId}@${customBaseQty}`;
+  return modKey ? `${base}#${modKey}` : base;
 }
 
 function newId(): string {
@@ -108,6 +138,10 @@ const EMPTY_TICKET = {
   pointsToRedeem: 0,
   tender: [] as PosTenderLine[],
   note: '',
+  activeAffiliate: null as PosAffiliateContext | null,
+  fulfillmentType: 'IN_STORE' as PosFulfillmentType,
+  deliveryZoneFeeCents: 0,
+  deliveryAddress: null as string | null,
 };
 
 export const usePosStore = create<PosState>()(
@@ -117,6 +151,7 @@ export const usePosStore = create<PosState>()(
       terminalLabel: 'TILL 1',
       staffId: null,
       staffName: null,
+      taxRateBps: 1500, // 15% standard default
 
       ...EMPTY_TICKET,
 
@@ -124,24 +159,36 @@ export const usePosStore = create<PosState>()(
       searchTerm: '',
       stockLocks: {},
 
-      setTerminal: ({ branchId, terminalLabel, staffId, staffName }) =>
+      setTerminal: ({ branchId, terminalLabel, staffId, staffName, taxRateBps = 1500 }) =>
         set((state) => ({
           branchId,
           terminalLabel,
           staffId,
           staffName,
-          // Changing branch mid-ticket would deduct from the wrong stock.
+          taxRateBps,
+          // Changing branch mid-ticket drops ticket to avoid stock inconsistency across physical sites.
           ...(state.branchId && state.branchId !== branchId ? EMPTY_TICKET : {}),
         })),
 
       clearTerminal: () =>
         set({ branchId: null, staffId: null, staffName: null, ...EMPTY_TICKET }),
 
+      setFulfillment: (fulfillmentType, deliveryZoneFeeCents = 0, deliveryAddress = null) =>
+        set({
+          fulfillmentType,
+          deliveryZoneFeeCents,
+          deliveryAddress,
+          tender: [], // tender recomputed on fee change
+        }),
+
+      setAffiliate: (activeAffiliate) => set({ activeAffiliate }),
+
       addLine: (line) =>
         set((state) => {
           const customBaseQty =
             line.customBaseQty === null ? null : roundBaseQty(line.customBaseQty, line.baseUom);
-          const key = ticketKey(line.variantId, customBaseQty);
+          const selectedModifiers = line.selectedModifiers ?? [];
+          const key = ticketKey(line.variantId, customBaseQty, selectedModifiers);
           const existing = state.lines.find((candidate) => candidate.key === key);
 
           if (existing) {
@@ -151,13 +198,22 @@ export const usePosStore = create<PosState>()(
                   ? { ...candidate, quantity: candidate.quantity + line.quantity }
                   : candidate,
               ),
-              // Adding stock invalidates an in-progress split tender.
               tender: [],
             };
           }
 
           return {
-            lines: [...state.lines, { ...line, customBaseQty, key }],
+            lines: [
+              ...state.lines,
+              {
+                ...line,
+                customBaseQty,
+                selectedModifiers,
+                key,
+                affiliateEligible: line.affiliateEligible ?? true,
+                lineDiscountCents: line.lineDiscountCents ?? 0,
+              },
+            ],
             tender: [],
           };
         }),
@@ -184,6 +240,20 @@ export const usePosStore = create<PosState>()(
       removeLine: (key) =>
         set((state) => ({
           lines: state.lines.filter((line) => line.key !== key),
+          tender: [],
+        })),
+
+      updateLineModifiers: (key, modifiers) =>
+        set((state) => ({
+          lines: state.lines.map((line) => {
+            if (line.key !== key) return line;
+            const updatedKey = ticketKey(line.variantId, line.customBaseQty, modifiers);
+            return {
+              ...line,
+              key: updatedKey,
+              selectedModifiers: modifiers,
+            };
+          }),
           tender: [],
         })),
 
@@ -215,47 +285,96 @@ export const usePosStore = create<PosState>()(
     }),
     {
       name: 'cartel-pos',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         branchId: state.branchId,
         terminalLabel: state.terminalLabel,
         staffId: state.staffId,
         staffName: state.staffName,
+        taxRateBps: state.taxRateBps,
+        fulfillmentType: state.fulfillmentType,
+        deliveryZoneFeeCents: state.deliveryZoneFeeCents,
         lines: state.lines,
         member: state.member,
         discountCents: state.discountCents,
         note: state.note,
+        activeAffiliate: state.activeAffiliate,
       }),
     },
   ),
 );
 
 // ---------------------------------------------------------------------------
-// Selectors
+// Selectors & Calculation Engine Bridge
 // ---------------------------------------------------------------------------
 
 export function posLineBaseQty(line: PosTicketLine): number {
   return (line.customBaseQty ?? line.baseQuantity) * line.quantity;
 }
 
+export function posLineModifiersPriceCents(line: PosTicketLine): number {
+  return (line.selectedModifiers || []).reduce((sum, mod) => sum + mod.priceDeltaCents, 0);
+}
+
 export function posLineTotalCents(line: PosTicketLine): number {
-  const unit =
+  let unitBase = line.branchOverridePriceCents ?? line.unitPriceCents;
+
+  if (line.volumeTiers && line.volumeTiers.length > 0) {
+    const matched = [...line.volumeTiers]
+      .sort((a, b) => b.minQty - a.minQty)
+      .find((tier) => line.quantity >= tier.minQty);
+    if (matched) unitBase = matched.unitPriceCents;
+  }
+
+  const effectiveUnit =
     line.customBaseQty === null
-      ? line.unitPriceCents
-      : Math.round(line.unitPriceCents * line.customBaseQty);
-  return unit * line.quantity;
+      ? unitBase + posLineModifiersPriceCents(line)
+      : Math.round(unitBase * line.customBaseQty) + posLineModifiersPriceCents(line);
+
+  return effectiveUnit * line.quantity;
 }
 
 export function selectPosSubtotalCents(state: PosState): number {
   return state.lines.reduce((total, line) => total + posLineTotalCents(line), 0);
 }
 
+/**
+ * Calculates complete cart result including subtotal, tiered breaks, modifiers,
+ * proportional order discounts, VAT, fulfillment fees, and affiliate commissions.
+ */
+export function selectPosCalculation(state: PosState, pointValueCents = 1): PosCalculationResult {
+  const pointsDiscountCents = Math.round(state.pointsToRedeem * pointValueCents);
+  const totalOrderDiscountCents = state.discountCents + pointsDiscountCents;
+
+  return calculatePosCart({
+    branchId: state.branchId || '',
+    taxRateBps: state.taxRateBps,
+    fulfillmentType: state.fulfillmentType,
+    deliveryZoneFeeCents: state.deliveryZoneFeeCents,
+    orderDiscountCents: totalOrderDiscountCents,
+    affiliate: state.activeAffiliate,
+    items: state.lines.map((line) => ({
+      id: line.key,
+      productId: line.productId,
+      variantId: line.variantId,
+      productName: line.productName,
+      variantLabel: line.variantLabel,
+      quantity: line.quantity,
+      baseCatalogPriceCents: line.unitPriceCents,
+      branchOverridePriceCents: line.branchOverridePriceCents,
+      costPriceCents: line.costPriceCents ?? 0,
+      volumeTiers: line.volumeTiers,
+      selectedModifiers: line.selectedModifiers,
+      lineDiscountCents: line.lineDiscountCents ?? 0,
+      affiliateEligible: line.affiliateEligible ?? true,
+    })),
+  });
+}
+
 export function selectPosTotalCents(state: PosState, pointValueCents = 1): number {
-  const subtotal = selectPosSubtotalCents(state);
-  const redemption = Math.round(state.pointsToRedeem * pointValueCents);
-  const discount = Math.min(subtotal, state.discountCents + redemption);
-  return subtotal - discount;
+  const calc = selectPosCalculation(state, pointValueCents);
+  return calc.grandTotalCents;
 }
 
 export function selectPosTenderedCents(state: PosState): number {

@@ -3,7 +3,12 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldOff, Sparkles, Undo2, Wallet } from 'lucide-react';
-import { adjustCredit, setMemberStatus } from '@/app/admin/crm/actions';
+import { adjustCredit, setMemberStatus as setMemberStatusAction } from '@/app/admin/(secure)/crm/actions';
+import {
+  IS_LOCAL_PREVIEW,
+  adjustMemberCredit,
+  setMemberStatus as setMemberStatusClient,
+} from '@/lib/data/source';
 import { Button } from '@/components/ui/button';
 import { Field, NumericInput, Textarea } from '@/components/ui/field';
 import { Card, Separator, Stat } from '@/components/ui/surfaces';
@@ -17,7 +22,13 @@ import type { MemberRow, MemberStatus } from '@/types/database';
  * negative amount; the database refuses to take a balance below zero, so there
  * is no path to a negative wallet.
  */
-export function MemberAdminPanel({ member }: { member: MemberRow }) {
+export function MemberAdminPanel({
+  member,
+  onUpdated,
+}: {
+  member: MemberRow;
+  onUpdated?: () => void;
+}) {
   const router = useRouter();
   const [amount, setAmount] = useState('');
   const [creditReason, setCreditReason] = useState('');
@@ -33,6 +44,23 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
   function submitCredit() {
     setError(null);
     setNotice(null);
+
+    if (IS_LOCAL_PREVIEW) {
+      startTransition(async () => {
+        try {
+          const deltaCents = Math.round(parsedAmount * 100);
+          const updated = await adjustMemberCredit(member.id, deltaCents, creditReason);
+          setNotice(`Balance is now ${formatCents(updated.credit_balance_cents)}.`);
+          setAmount('');
+          setCreditReason('');
+          onUpdated?.();
+          router.refresh();
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : 'Could not adjust credit.');
+        }
+      });
+      return;
+    }
 
     const formData = new FormData();
     formData.set('member_id', member.id);
@@ -52,6 +80,7 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
       );
       setAmount('');
       setCreditReason('');
+      onUpdated?.();
       router.refresh();
     });
   }
@@ -60,19 +89,40 @@ export function MemberAdminPanel({ member }: { member: MemberRow }) {
     setError(null);
     setNotice(null);
 
+    if (IS_LOCAL_PREVIEW) {
+      startTransition(async () => {
+        try {
+          await setMemberStatusClient(
+            member.id,
+            status,
+            status === 'SUSPENDED' ? statusReason : undefined,
+          );
+          setConfirmingSuspend(false);
+          setStatusReason('');
+          setNotice(`Member status updated to ${status.replace('_', ' ')}.`);
+          onUpdated?.();
+          router.refresh();
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : 'Could not change status.');
+        }
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.set('member_id', member.id);
     formData.set('status', status);
     if (status === 'SUSPENDED') formData.set('reason', statusReason);
 
     startTransition(async () => {
-      const result = await setMemberStatus(formData);
+      const result = await setMemberStatusAction(formData);
       if (!result.ok) {
         setError(result.error ?? 'Could not change status.');
         return;
       }
       setConfirmingSuspend(false);
       setStatusReason('');
+      onUpdated?.();
       router.refresh();
     });
   }
