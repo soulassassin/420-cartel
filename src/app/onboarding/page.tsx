@@ -291,22 +291,22 @@ export default function OnboardingPage() {
   ]);
 
   return (
-    <main className="relative min-h-screen bg-void pb-32 pt-16">
+    <main className="relative min-h-screen bg-void pb-20 pt-8 sm:pb-32 sm:pt-16">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] " />
 
       <div className="container relative max-w-3xl">
-        <header className="flex flex-col gap-4">
+        <header className="flex flex-col gap-3 sm:gap-4">
           <Eyebrow>Private Collective Onboarding</Eyebrow>
-          <h1 className="display-md text-white">
+          <h1 className="font-display text-3xl uppercase text-white sm:text-4xl md:text-display-md">
             Join the <span className="">Cartel</span>
           </h1>
-          <p className="max-w-xl type-ui leading-relaxed text-ash">
+          <p className="max-w-xl text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
             420 Cartel is a private cannabis collective and social lounge network operating under the
             Cannabis for Private Purposes Act for adult private consumption. Membership is strictly restricted
             to verified adults {LEGAL_AGE} and over (Strictly No Under 18). Digital passes grant access to our
             Johannesburg lounges in Norwood, Rivonia, and Kibler Park, open daily 09:00 - 20:00.
           </p>
-          <p className="type-ui text-ash">
+          <p className="text-xs sm:text-sm md:type-ui text-ash">
             Already a member?{' '}
             <Link href="/login" className="ghost-link text-foreground">
               Log in
@@ -320,7 +320,7 @@ export default function OnboardingPage() {
         </header>
 
         {/* Step rail */}
-        <ol className="mt-12 grid grid-cols-3 gap-2" aria-label="Onboarding progress">
+        <ol className="mt-8 sm:mt-12 grid grid-cols-3 gap-2" aria-label="Onboarding progress">
           {STEPS.map((label, index) => {
             const state = index < step ? 'done' : index === step ? 'current' : 'todo';
             return (
@@ -328,7 +328,7 @@ export default function OnboardingPage() {
                 key={label}
                 aria-current={state === 'current' ? 'step' : undefined}
                 className={cn(
-                  'flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2.5 border-t-2 pt-3',
+                  'flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2.5 border-t-2 pt-2.5 sm:pt-3',
                   state === 'done' && 'border-ash text-foreground',
                   state === 'current' && 'border-foreground text-white',
                   state === 'todo' && 'border-[color:var(--border-mono)] text-ash',
@@ -337,7 +337,7 @@ export default function OnboardingPage() {
                 <span className="font-mono text-xs sm:type-ui tabular-nums">
                   {state === 'done' ? <Check className="size-3.5" /> : `0${index + 1}`}
                 </span>
-                <span className="font-mono text-xs sm:type-ui truncate">
+                <span className="font-mono text-[11px] sm:text-xs md:type-ui line-clamp-1">
                   {label}
                 </span>
               </li>
@@ -348,7 +348,7 @@ export default function OnboardingPage() {
         {formError ? (
           <p
             role="alert"
-            className="mt-8 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground"
+            className="mt-6 sm:mt-8 border border-foreground bg-transparent px-3.5 py-2.5 sm:px-4 sm:py-3 font-mono text-xs sm:type-ui text-foreground"
           >
             {formError}
           </p>
@@ -356,25 +356,27 @@ export default function OnboardingPage() {
 
         {/* ---------------- STEP 1 ---------------- */}
         {step === 0 ? (
-          <Card className="mt-8 flex flex-col gap-8 p-6 sm:p-8">
+          <Card className="mt-6 sm:mt-8 flex flex-col gap-6 sm:gap-8 p-4 sm:p-8">
             <div>
               <Label>Identity Document</Label>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 <Button
                   variant={idMode === 'SA_ID' ? 'active' : 'surface'}
                   onClick={() => setIdMode('SA_ID')}
                   type="button"
+                  className="h-11 sm:h-12 w-full justify-center text-xs sm:text-sm md:type-ui px-3"
                 >
-                  <UserRoundCheck className="size-4" />
-                  SA 13-Digit ID
+                  <UserRoundCheck className="size-4 shrink-0" />
+                  <span>SA 13-Digit ID</span>
                 </Button>
                 <Button
                   variant={idMode === 'PASSPORT' ? 'active' : 'surface'}
                   onClick={() => setIdMode('PASSPORT')}
                   type="button"
+                  className="h-11 sm:h-12 w-full justify-center text-xs sm:text-sm md:type-ui px-3"
                 >
-                  <Globe2 className="size-4" />
-                  International Passport
+                  <Globe2 className="size-4 shrink-0" />
+                  <span>International Passport</span>
                 </Button>
               </div>
             </div>
@@ -382,14 +384,14 @@ export default function OnboardingPage() {
             {idMode === 'SA_ID' ? (
               <SaIdField value={saIdNumber} onValueChange={setSaIdNumber} />
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
                 <Field label="Passport Number" htmlFor="passport_number" required>
                   <Input
                     id="passport_number"
                     value={passportNumber}
                     onChange={(event) => setPassportNumber(event.target.value.toUpperCase())}
                     placeholder="A01234567"
-                    className="font-mono "
+                    className="font-mono text-base sm:text-sm"
                   />
                 </Field>
                 <Field
@@ -405,7 +407,7 @@ export default function OnboardingPage() {
                       setPassportCountry(event.target.value.toUpperCase().slice(0, 2))
                     }
                     placeholder="GB"
-                    className="font-mono "
+                    className="font-mono text-base sm:text-sm"
                   />
                 </Field>
                 <Field
@@ -425,7 +427,7 @@ export default function OnboardingPage() {
                     value={passportDob}
                     onChange={(event) => setPassportDob(event.target.value)}
                     max={new Date().toISOString().slice(0, 10)}
-                    className="font-mono"
+                    className="font-mono text-base sm:text-sm"
                   />
                 </Field>
               </div>
@@ -433,7 +435,7 @@ export default function OnboardingPage() {
 
             <Separator />
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
               <Field label="First Name" htmlFor="first_name" required>
                 <Input
                   id="first_name"
@@ -472,7 +474,7 @@ export default function OnboardingPage() {
                 />
               </Field>
               {needsAccount ? (
-                <Field label="Create Password" htmlFor="password" hint="8+ characters" required>
+                <Field label="Create Password" htmlFor="password" hint="8+ characters" required className="sm:col-span-2">
                   <Input
                     id="password"
                     type="password"
@@ -484,14 +486,14 @@ export default function OnboardingPage() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
               {identity.ok ? (
-                <Badge tone="live">
-                  <ShieldCheck className="size-3" />
+                <Badge tone="live" className="justify-center sm:justify-start py-2 sm:py-1">
+                  <ShieldCheck className="size-3.5" />
                   {LEGAL_AGE}+ Confirmed
                 </Badge>
               ) : (
-                <span className="font-mono type-ui text-ash">
+                <span className="font-mono text-xs sm:type-ui text-ash text-center sm:text-left">
                   Awaiting a valid document
                 </span>
               )}
@@ -503,6 +505,7 @@ export default function OnboardingPage() {
                   setFormError(null);
                   setStep(1);
                 }}
+                className="w-full sm:w-auto h-12 sm:h-14 px-6"
               >
                 Continue
                 <ArrowRight className="size-4" />
@@ -513,21 +516,21 @@ export default function OnboardingPage() {
 
         {/* ---------------- STEP 2 ---------------- */}
         {step === 1 ? (
-          <div className="mt-8 flex flex-col gap-6">
-            <Card className="flex flex-col gap-6 p-6 sm:p-8">
+          <div className="mt-6 sm:mt-8 flex flex-col gap-6">
+            <Card className="flex flex-col gap-5 sm:gap-6 p-4 sm:p-8">
               <div>
                 <Eyebrow>Step 02 · KYC</Eyebrow>
-                <h2 className="mt-2 font-display text-xl uppercase text-white">
+                <h2 className="mt-2 font-display text-lg sm:text-xl uppercase text-white">
                   Document Verification
                 </h2>
-                <p className="mt-2 type-ui text-ash">
+                <p className="mt-1.5 text-xs sm:text-sm md:type-ui text-ash">
                   {IS_LOCAL_PREVIEW
                     ? 'Local preview: files are hashed in your browser and never uploaded. Against a configured project they go to the private kyc-documents bucket.'
                     : 'Files upload to the private kyc-documents bucket. Only the reviewing staff member can open them, through a short-lived signed URL.'}
                 </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 {UPLOAD_SLOTS.map((slot) => (
                   <Dropzone
                     key={slot.key}
@@ -540,18 +543,18 @@ export default function OnboardingPage() {
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-5 p-6 sm:p-8">
+            <Card className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-8">
               <div>
                 <Eyebrow>Private Grow-Club Mandate</Eyebrow>
-                <h2 className="mt-2 font-display text-xl uppercase text-white">
+                <h2 className="mt-2 font-display text-lg sm:text-xl uppercase text-white">
                   Personal Allocation Agreement
                 </h2>
-                <p className="mt-1 font-mono type-ui text-ash">
+                <p className="mt-1 font-mono text-xs sm:type-ui text-ash">
                   Version {MEMBERSHIP_AGREEMENT_VERSION}
                 </p>
               </div>
 
-              <div className="max-h-56 overflow-y-auto border border-[color:var(--border-mono)] bg-void p-4 type-ui leading-relaxed text-ash cartel-scroll">
+              <div className="max-h-48 sm:max-h-56 overflow-y-auto border border-[color:var(--border-mono)] bg-void p-3 sm:p-4 text-xs sm:text-sm leading-relaxed text-ash cartel-scroll">
                 <p className="mb-3">
                   <strong className="text-foreground">1. Private collective.</strong> 420 Cartel is a
                   closed private collective. Cultivation is undertaken collectively on behalf of
@@ -586,14 +589,14 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3">
+              <label className="flex cursor-pointer items-start gap-3 p-1 -m-1">
                 <input
                   type="checkbox"
                   checked={agreementSigned}
                   onChange={(event) => setAgreementSigned(event.target.checked)}
-                  className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
+                  className="mt-0.5 size-5 sm:size-4 shrink-0 accent-[#D4AF37]"
                 />
-                <span className="type-ui leading-relaxed text-ash">
+                <span className="text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
                   I have read and digitally sign the{' '}
                   <span className="text-foreground">Personal Allocation Agreement</span> as{' '}
                   <span className="text-foreground">
@@ -603,21 +606,26 @@ export default function OnboardingPage() {
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3">
+              <label className="flex cursor-pointer items-start gap-3 p-1 -m-1">
                 <input
                   type="checkbox"
                   checked={ageDeclared}
                   onChange={(event) => setAgeDeclared(event.target.checked)}
-                  className="mt-0.5 size-4 shrink-0 accent-[#D4AF37]"
+                  className="mt-0.5 size-5 sm:size-4 shrink-0 accent-[#D4AF37]"
                 />
-                <span className="type-ui leading-relaxed text-ash">
+                <span className="text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
                   I declare that I am {LEGAL_AGE} years or older and that the document details above
                   are mine.
                 </span>
               </label>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <Button variant="ghost" onClick={() => setStep(0)} disabled={submitting}>
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep(0)}
+                  disabled={submitting}
+                  className="h-11 sm:h-12 w-full sm:w-auto px-4 justify-center"
+                >
                   Back
                 </Button>
                 <Button
@@ -625,6 +633,7 @@ export default function OnboardingPage() {
                   size="lg"
                   disabled={!step2Ready || submitting}
                   onClick={() => void submit()}
+                  className="h-12 sm:h-14 w-full sm:w-auto px-6"
                 >
                   {submitting ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -640,16 +649,16 @@ export default function OnboardingPage() {
 
         {/* ---------------- STEP 3 ---------------- */}
         {step === 2 && issuedMember ? (
-          <div className="mt-8 flex flex-col items-center gap-8">
+          <div className="mt-8 flex flex-col items-center gap-6 sm:gap-8">
             <div className="text-center">
               <Badge tone="live" className="mx-auto">
                 <ShieldCheck className="size-3" />
                 Membership Issued
               </Badge>
-              <h2 className="mt-5 font-display text-2xl uppercase text-white">
+              <h2 className="mt-4 font-display text-2xl sm:text-3xl uppercase text-white">
                 Welcome to the Cartel
               </h2>
-              <p className="mx-auto mt-3 max-w-md type-ui leading-relaxed text-ash">
+              <p className="mx-auto mt-2.5 max-w-md text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
                 {issuedMember.status === 'PENDING_KYC'
                   ? 'Your pass is live and the Vault is open. Our team will review your documents in the background.'
                   : 'Your pass is live. Present the QR at the vault, or open the private dispensary to place your first allocation.'}
@@ -658,8 +667,8 @@ export default function OnboardingPage() {
 
             <CartelMemberQrPass member={issuedMember} />
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="gold" size="lg" asChild>
+            <div className="flex w-full flex-wrap items-center justify-center gap-3">
+              <Button variant="gold" size="lg" asChild className="w-full sm:w-auto px-8 h-12 sm:h-14">
                 <Link href="/shop">
                   Enter the Vault
                   <ArrowRight className="size-4" />
@@ -669,11 +678,11 @@ export default function OnboardingPage() {
           </div>
         ) : null}
         {/* Compliance and social footer */}
-        <footer className="mt-16 border-t border-[color:var(--border-mono)] pt-8 text-center text-sm text-ash">
+        <footer className="mt-12 sm:mt-16 border-t border-[color:var(--border-mono)] pt-6 sm:pt-8 text-center text-xs sm:text-sm text-ash">
           <p>
             420 Cartel &middot; Private Cannabis Social Lounge &amp; Botanical Collective &middot; Operating daily 09:00 - 20:00
           </p>
-          <div className="mt-3 flex justify-center gap-6">
+          <div className="mt-3 flex flex-wrap justify-center gap-4 sm:gap-6">
             <a
               href="https://www.instagram.com/fourtwentycartel/"
               target="_blank"
@@ -712,7 +721,7 @@ function Dropzone({
   const [dragging, setDragging] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5 sm:gap-2">
       <Label>{slot.label}</Label>
       <div
         onDragOver={(event) => {
@@ -726,8 +735,12 @@ function Dropzone({
           const file = event.dataTransfer.files[0];
           if (file) onFile(file);
         }}
+        onClick={() => {
+          if (!upload) inputRef.current?.click();
+        }}
         className={cn(
-          'relative flex min-h-36 flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 text-center ',
+          'relative flex min-h-32 sm:min-h-36 flex-col items-center justify-center gap-2 border border-dashed px-3 py-4 sm:px-4 sm:py-5 text-center transition-colors',
+          !upload && 'cursor-pointer active:bg-white/5',
           dragging
             ? 'border-foreground bg-transparent'
             : upload
@@ -742,23 +755,26 @@ function Dropzone({
               <img
                 src={upload.previewUrl}
                 alt={`${slot.label} preview`}
-                className="h-20 w-auto border border-[color:var(--border-mono)] object-cover"
+                className="h-16 sm:h-20 w-auto border border-[color:var(--border-mono)] object-cover"
               />
             ) : (
               <FileCheck2 className="size-6 text-foreground" />
             )}
-            <p className="max-w-full truncate font-mono type-ui text-foreground">
+            <p className="max-w-full truncate font-mono text-xs sm:type-ui text-foreground">
               {upload.name}
             </p>
-            <p className="font-mono type-ui text-ash">
+            <p className="font-mono text-[11px] sm:type-ui text-ash">
               {(upload.size / 1024).toFixed(0)} KB · sha256:{upload.digest}
             </p>
             <Button
               variant="ghost"
               size="sm"
               type="button"
-              onClick={onClear}
-              className="mt-1 h-7 text-foreground hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="mt-1 h-8 px-3 text-xs sm:text-sm text-foreground hover:text-foreground"
             >
               <Trash2 className="size-3" />
               Replace
@@ -766,15 +782,13 @@ function Dropzone({
           </>
         ) : (
           <>
-            <Upload className="size-6 text-ash" />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="font-mono type-ui text-foreground hover:text-foreground"
+            <Upload className="size-5 sm:size-6 text-ash" />
+            <span
+              className="font-mono text-xs sm:type-ui text-foreground underline-offset-4 hover:underline"
             >
-              Choose a file
-            </button>
-            <p className="max-w-[18rem] type-ui leading-relaxed text-ash">{slot.hint}</p>
+              Choose a file or take photo
+            </span>
+            <p className="max-w-[18rem] text-[11px] sm:text-xs leading-relaxed text-ash">{slot.hint}</p>
           </>
         )}
 
@@ -782,6 +796,7 @@ function Dropzone({
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+          capture="environment"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];

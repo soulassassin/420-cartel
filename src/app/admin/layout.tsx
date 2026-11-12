@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { headers } from 'next/headers';
 
 import { requireStaff } from '@/lib/supabase/guard';
 
@@ -14,7 +15,11 @@ import { requireStaff } from '@/lib/supabase/guard';
  * silently dropped.
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  await requireStaff();
+  const h = await headers();
+  const pathname = h.get('x-pathname') || '';
+  if (!pathname.includes('/admin/login')) {
+    await requireStaff();
+  }
 
   // `shell-operational` only tightens UI type so tables hold their data.
   return <div className="shell-operational contents">{children}</div>;

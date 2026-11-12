@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ExternalLink, Eye, Loader2, X } from 'lucide-react';
-import { getKycDocumentUrl, reviewKyc } from '@/app/admin/(secure)/crm/actions';
+import { getKycDocumentUrl, reviewKyc } from '@/app/admin/crm/actions';
 import { IS_LOCAL_PREVIEW, reviewMemberKyc } from '@/lib/data/source';
 import { Button } from '@/components/ui/button';
 import { Field, Textarea } from '@/components/ui/field';

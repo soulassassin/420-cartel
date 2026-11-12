@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldOff, Sparkles, Undo2, Wallet } from 'lucide-react';
-import { adjustCredit, setMemberStatus as setMemberStatusAction } from '@/app/admin/(secure)/crm/actions';
+import { adjustCredit, setMemberStatus as setMemberStatusAction } from '@/app/admin/crm/actions';
 import {
   IS_LOCAL_PREVIEW,
   adjustMemberCredit,

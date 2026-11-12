@@ -69,7 +69,7 @@ import {
 } from './fixtures';
 
 const STORAGE_KEY = 'cartel-local-db';
-const STORAGE_VERSION = 5;
+const STORAGE_VERSION = 6;
 
 export interface LocalDb {
   version: number;
@@ -460,14 +460,18 @@ export interface LocalCreateProductInput {
 // Catalogue categories (flower grades and other shelf groupings)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CATEGORY_NAMES = ['Greenhouse', 'Indoor', 'Hydro'];
+const DEFAULT_CATEGORIES: { id: string; name: string }[] = [
+  { id: '49936753-5d0f-46f0-b928-5c18142a8b95', name: 'Greenhouse' },
+  { id: '6bb6f742-3c56-491e-92bd-4b02ab092e20', name: 'Indoor' },
+  { id: '4dfece1a-9eb5-46b1-a881-ca25c26a6b0f', name: 'Hydro' },
+];
 
 function ensureCategories(db: LocalDb): CatalogueCategoryRow[] {
-  if (!Array.isArray(db.categories)) {
+  if (!Array.isArray(db.categories) || db.categories.length === 0) {
     const now = new Date().toISOString();
-    db.categories = DEFAULT_CATEGORY_NAMES.map((name, index) => ({
-      id: `local-category-${name.toLowerCase()}`,
-      name,
+    db.categories = DEFAULT_CATEGORIES.map((cat, index) => ({
+      id: cat.id,
+      name: cat.name,
       product_type: 'FLOWER' as ProductCategory,
       sort_order: index + 1,
       is_active: true,

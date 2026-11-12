@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { ArrowRight, Boxes, ScanLine, Trophy, Users } from 'lucide-react';
@@ -43,11 +44,18 @@ export default function AdminHubPage() {
     <main className="min-h-screen bg-void pb-28 pt-14">
       <div className="container max-w-5xl">
         <div className="flex items-center gap-4">
+          <Image
+            src="/fourtwentycartel_logo.jpg"
+            alt="420 Cartel"
+            width={48}
+            height={48}
+            className="rounded-full border border-gold/30 object-cover"
+          />
           <BrandLogo priority />
           <div>
             <Eyebrow>Back Office Command</Eyebrow>
             <h1 className="mt-1 display-md text-white">
-              Cartel <span className="">Operations</span>
+              420 Cartel Operations
             </h1>
           </div>
         </div>

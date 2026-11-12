@@ -19,9 +19,9 @@ export const CARTEL_COLORS = {
   textPrimary: '#FFFFFF',
   /** Ash grey: metadata and anything that must recede behind the headline. */
   textMuted: '#8E8E8E',
-  gold: '#D4AF37',
-  goldBright: '#F3E5AB',
-  goldDeep: '#AA771C',
+  gold: '#C5A059',
+  goldBright: '#FCF6D8',
+  goldDeep: '#726048',
 } as const;
 
 export type CartelColor = keyof typeof CARTEL_COLORS;

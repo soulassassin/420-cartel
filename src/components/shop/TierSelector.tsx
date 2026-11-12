@@ -125,7 +125,7 @@ export function TierSelector({
   return (
     <div className="flex flex-col gap-4">
       {/* ---- Fixed tiers ------------------------------------------------- */}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         {fixedTiers.map((variant) => {
           const fillable = availableBaseQty >= variant.base_quantity;
           const active = variant.id === selectedId;
@@ -140,15 +140,15 @@ export function TierSelector({
               }}
               aria-pressed={active}
               className={cn(
-                'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 ',
+                'flex min-h-[44px] sm:min-w-[4.5rem] flex-col items-center justify-center gap-0.5 border px-3 py-2 ',
                 active
-                  ? 'border-foreground bg-transparent text-foreground '
+                  ? 'border-gold bg-transparent text-gold '
                   : 'border-[color:var(--border-mono)] text-foreground hover:border-ash',
                 !fillable && 'cursor-not-allowed opacity-30',
               )}
             >
-              <span className="font-mono type-ui tabular-nums">{variant.label}</span>
-              <span className="font-mono type-ui tabular-nums text-ash">
+              <span className="font-mono text-xs sm:type-ui tabular-nums">{variant.label}</span>
+              <span className="font-mono text-xs sm:type-ui tabular-nums text-ash">
                 {formatCents(variant.price_cents)}
               </span>
             </button>
@@ -164,14 +164,14 @@ export function TierSelector({
             }}
             aria-pressed={usingCustom}
             className={cn(
-              'flex min-w-[4.5rem] flex-col items-center gap-0.5 border px-3 py-2 ',
+              'flex min-h-[44px] sm:min-w-[4.5rem] flex-col items-center justify-center gap-0.5 border px-3 py-2 ',
               usingCustom
-                ? 'border-foreground bg-transparent text-foreground '
+                ? 'border-gold bg-transparent text-gold '
                 : 'border-dashed border-[color:var(--border-mono)] text-ash hover:border-ash',
             )}
           >
-            <span className="font-mono type-ui">Custom</span>
-            <span className="font-mono type-ui text-ash">
+            <span className="font-mono text-xs sm:type-ui">Custom</span>
+            <span className="font-mono text-xs sm:type-ui text-ash">
               {UOM_SYMBOL[baseUom]}
             </span>
           </button>

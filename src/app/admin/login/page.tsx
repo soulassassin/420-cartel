@@ -16,7 +16,7 @@
 import { Suspense, useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { KeyRound, Loader2, LogIn, ScanLine, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Boxes, KeyRound, Loader2, LogIn, ScanLine, ShieldCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
@@ -143,9 +143,38 @@ function StaffLoginForm() {
         </Button>
       </form>
 
-      <p className="border-t border-[color:var(--border-mono)] pt-4 type-ui leading-relaxed text-ash">
-        A counter PIN is requested separately once the POS terminal opens.
-      </p>
+      <div className="space-y-3 border-t border-[color:var(--border-mono)] pt-5">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-gold">
+            <span className="size-2 animate-pulse rounded-full bg-gold" />
+            Evaluation / Demo Mode
+          </span>
+          <Link
+            href="/demo"
+            className="flex items-center gap-1 font-mono text-xs text-ash hover:text-foreground"
+          >
+            Demo Hub
+            <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        <p className="type-ui text-xs leading-relaxed text-ash">
+          Need to test the Sandton Vault POS or Central Inventory without staff credentials?
+        </p>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <Button variant="outline" size="sm" asChild className="h-10 border-gold/40 hover:border-gold">
+            <Link href="/pos?demo=true">
+              <ScanLine className="size-3.5 text-gold" />
+              Demo POS
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="h-10 border-gold/40 hover:border-gold">
+            <Link href="/admin/inventory?demo=true">
+              <Boxes className="size-3.5 text-gold" />
+              Demo IMS
+            </Link>
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -167,26 +196,28 @@ function PreviewPanel() {
           Staff <span className="">Authentication</span>
         </h1>
         <p className="mt-2 type-ui leading-relaxed text-ash">
-          Supabase is not configured, so there is no auth server to sign in against
-          and the staff surfaces are unlocked for demonstration. Set
-          <code className="mx-1 text-foreground">NEXT_PUBLIC_SUPABASE_URL</code>
-          and
-          <code className="mx-1 text-foreground">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
-          to turn the real operator gate on.
+          Staff surfaces are currently unlocked in demonstration mode with full simulated
+          inventory, multi-UOM tickets, and FIFO stock ledger.
         </p>
       </div>
 
       <div className="flex flex-col gap-2.5">
         <Button variant="gold" size="lg" block asChild>
-          <Link href="/admin/pos">
+          <Link href="/pos?demo=true">
             <ScanLine className="size-4" />
             Enter POS Terminal
           </Link>
         </Button>
-        <Button variant="outline" size="lg" block asChild>
-          <Link href="/admin">
+        <Button variant="outline" size="lg" block asChild className="border-gold/50 text-white hover:border-gold">
+          <Link href="/admin/inventory?demo=true">
+            <Boxes className="size-4 text-gold" />
+            Enter Inventory Ledger (IMS)
+          </Link>
+        </Button>
+        <Button variant="ghost" size="lg" block asChild>
+          <Link href="/admin?demo=true">
             <ShieldCheck className="size-4" />
-            Enter Back Office
+            Enter Back Office Hub
           </Link>
         </Button>
       </div>

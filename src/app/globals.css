@@ -24,22 +24,22 @@
     --text-muted: #8e8e8e;
     --text-faint: #8e8e8e;
 
-    /* The single accent. 9.6:1 on black, so it is safe for small text. */
-    --gold: #d4af37;
+    /* The single accent. */
+    --gold: #c5a059;
     --nav-gold: var(--gold);
     --accent-gold: var(--gold);
-    --accent-gold-bright: #e8c766;
-    --accent-gold-deep: #9a7b1f;
+    --accent-gold-bright: #fcf6d8;
+    --accent-gold-deep: #726048;
 
-    --border-subtle: #8e8e8e;
+    --border-subtle: rgba(197, 160, 89, 0.2);
     --border-hard: #ffffff;
     --border-mono: #8e8e8e;
 
     --radius: 0px;
 
-    --shadow-gold-glow: none;
+    --shadow-gold-glow: 0 0 20px -4px rgba(197, 160, 89, 0.22);
     --shadow-obsidian: none;
-    --gradient-gold-sheen: none;
+    --gradient-gold-sheen: linear-gradient(135deg, rgba(252, 246, 216, 0.12) 0%, rgba(197, 160, 89, 0.06) 50%, rgba(114, 96, 72, 0) 100%);
     --gradient-vault-radial: none;
     --gradient-surface-fade: none;
     --glass-blur: none;
@@ -65,6 +65,12 @@
     --dur-slow: 800ms;
     --reveal-shift: 24px;
     --stagger: 120ms;
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --text-ui: 15px;
+    }
   }
 
   /* Same design, tighter type, so the till and tables hold their data. */
@@ -104,11 +110,18 @@
 
   body {
     @apply bg-void text-foreground font-sans antialiased;
-    font-size: 19px;
-    line-height: 1.25;
+    font-size: 16px;
+    line-height: 1.35;
     overscroll-behavior-y: none;
     overflow-x: hidden;
     text-rendering: optimizeLegibility;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      font-size: 19px;
+      line-height: 1.25;
+    }
   }
 
   ::selection {
@@ -167,7 +180,11 @@
   .display-md {
     @apply font-display uppercase;
     font-weight: 400;
-    letter-spacing: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .body-measure {
+    max-width: 65ch;
   }
 
   .display-xl {
@@ -431,12 +448,10 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-      105deg,
-      transparent 35%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 65%
-    );
+    background: linear-gradient(105deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 65%);
     transform: translate3d(-110%, 0, 0);
   }
 
@@ -449,6 +464,7 @@
     from {
       transform: translate3d(-110%, 0, 0);
     }
+
     to {
       transform: translate3d(110%, 0, 0);
     }
@@ -476,6 +492,7 @@
       opacity: 0;
       transform: scale(0.94);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -483,6 +500,7 @@
   }
 
   @media (hover: hover) {
+
     /* Both buttons fill gold on hover; black text keeps 9.6:1 on the fill. */
     .btn-primary:hover,
     .btn-secondary:hover {
@@ -539,10 +557,12 @@
   .marquee-track {
     animation: marquee 48s linear infinite;
   }
+
   @keyframes marquee {
     from {
       transform: translateX(0);
     }
+
     to {
       transform: translateX(-50%);
     }
@@ -559,6 +579,7 @@
       opacity: 0;
       transform: translate3d(0, var(--reveal-shift), 0);
     }
+
     to {
       opacity: 1;
       transform: none;
@@ -569,6 +590,15 @@
 @layer utilities {
   .content-layer {
     position: relative;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
@@ -625,10 +655,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }}
+  }
+}

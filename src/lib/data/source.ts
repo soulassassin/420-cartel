@@ -82,13 +82,49 @@ import {
 
 export type DataMode = 'SUPABASE' | 'LOCAL';
 
-export function dataMode(): DataMode {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? 'SUPABASE'
-    : 'LOCAL';
+export function isDemoModeActive(): boolean {
+  if (typeof window !== 'undefined') {
+    try {
+      if (window.localStorage.getItem('cartel-demo-mode') === 'true') return true;
+      if (document.cookie.includes('cartel_demo_mode=true')) return true;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('demo') === '1' || params.get('demo') === 'true') return true;
+    } catch {
+      // Storage or cookie read blocked
+    }
+  }
+  if (process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1') return true;
+  return !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 }
 
-export const IS_LOCAL_PREVIEW = dataMode() === 'LOCAL';
+export function setDemoMode(enabled: boolean): void {
+  if (typeof window !== 'undefined') {
+    try {
+      if (enabled) {
+        window.localStorage.setItem('cartel-demo-mode', 'true');
+        document.cookie = 'cartel_demo_mode=true; path=/; max-age=86400; SameSite=Lax';
+      } else {
+        window.localStorage.removeItem('cartel-demo-mode');
+        document.cookie = 'cartel_demo_mode=; path=/; max-age=0; SameSite=Lax';
+      }
+    } catch {
+      // storage blocked
+    }
+  }
+}
+
+export function dataMode(): DataMode {
+  return isDemoModeActive() ? 'LOCAL' : 'SUPABASE';
+}
+
+export const IS_LOCAL_PREVIEW =
+  process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1' ||
+  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export function isLocalMode(): boolean {
+  return IS_LOCAL_PREVIEW || isDemoModeActive();
+}
 
 /** A product with everything the catalogue, POS and admin grids need. */
 export interface CatalogueEntry {
@@ -122,7 +158,7 @@ function wrap(error: unknown): DataSourceError {
 // ---------------------------------------------------------------------------
 
 export async function listBranches(): Promise<BranchRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().branches;
+  if (isLocalMode()) return readLocalDb().branches;
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('branches')
@@ -134,7 +170,7 @@ export async function listBranches(): Promise<BranchRow[]> {
 }
 
 export async function listCatalogue(branchId: string): Promise<CatalogueEntry[]> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     const db = readLocalDb();
     return db.products
       .filter((product) => product.is_active)
@@ -199,7 +235,7 @@ function normalizeMember(member: MemberRow): MemberRow {
 }
 
 export async function listMembers(): Promise<MemberRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().members.map(normalizeMember);
+  if (isLocalMode()) return readLocalDb().members.map(normalizeMember);
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('members')
@@ -211,7 +247,7 @@ export async function listMembers(): Promise<MemberRow[]> {
 }
 
 export async function lookupMembers(query: string): Promise<MemberRow[]> {
-  if (IS_LOCAL_PREVIEW) return localLookupMembers(query);
+  if (isLocalMode()) return localLookupMembers(query);
   const needle = query.trim();
   if (needle.length < 2) return [];
 
@@ -237,7 +273,7 @@ export async function lookupMembers(query: string): Promise<MemberRow[]> {
 }
 
 export async function listOrders(limit = 200): Promise<OrderRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().orders.slice(0, limit);
+  if (isLocalMode()) return readLocalDb().orders.slice(0, limit);
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('orders')
@@ -250,7 +286,7 @@ export async function listOrders(limit = 200): Promise<OrderRow[]> {
 
 export async function listOrderItems(orderIds: string[]): Promise<OrderItemRow[]> {
   if (orderIds.length === 0) return [];
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     return readLocalDb().orderItems.filter((item) => orderIds.includes(item.order_id));
   }
   const supabase = createCartelBrowserClient();
@@ -260,7 +296,7 @@ export async function listOrderItems(orderIds: string[]): Promise<OrderItemRow[]
 }
 
 export async function listStockMovements(limit = 300): Promise<StockMovementRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().movements.slice(0, limit);
+  if (isLocalMode()) return readLocalDb().movements.slice(0, limit);
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('stock_movements')
@@ -272,7 +308,7 @@ export async function listStockMovements(limit = 300): Promise<StockMovementRow[
 }
 
 export async function getLoyaltyRules(): Promise<LoyaltyRulesRow> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().loyaltyRules;
+  if (isLocalMode()) return readLocalDb().loyaltyRules;
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('loyalty_rules')
@@ -286,7 +322,7 @@ export async function getLoyaltyRules(): Promise<LoyaltyRulesRow> {
 }
 
 export async function listAffiliateCodes(): Promise<AffiliateCodeRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().affiliateCodes;
+  if (isLocalMode()) return readLocalDb().affiliateCodes;
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('affiliate_codes')
@@ -297,7 +333,7 @@ export async function listAffiliateCodes(): Promise<AffiliateCodeRow[]> {
 }
 
 export async function listAffiliateAttributions(): Promise<AffiliateAttributionRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().attributions;
+  if (isLocalMode()) return readLocalDb().attributions;
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('affiliate_attributions')
@@ -309,7 +345,7 @@ export async function listAffiliateAttributions(): Promise<AffiliateAttributionR
 }
 
 export async function listMediaJobs(): Promise<ProductMediaJobRow[]> {
-  if (IS_LOCAL_PREVIEW) return readLocalDb().mediaJobs;
+  if (isLocalMode()) return readLocalDb().mediaJobs;
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('product_media_jobs')
@@ -325,7 +361,7 @@ export async function listMediaJobs(): Promise<ProductMediaJobRow[]> {
 // ---------------------------------------------------------------------------
 
 export async function processOrder(payload: ProcessOrderPayload): Promise<ProcessOrderResult> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localProcessOrder(payload);
     } catch (error) {
@@ -344,7 +380,7 @@ export async function adjustBatchStock(input: {
   baseQty: number;
   reason: string;
 }): Promise<MasterBatchRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localAdjustBatchStock(input);
     } catch (error) {
@@ -377,7 +413,7 @@ export interface CreateBatchInput {
 }
 
 export async function createBatch(input: CreateBatchInput): Promise<MasterBatchRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localCreateBatch(input);
     } catch (error) {
@@ -410,7 +446,7 @@ export async function createBatch(input: CreateBatchInput): Promise<MasterBatchR
 export type CreateProductInput = LocalCreateProductInput;
 
 export async function createProduct(input: CreateProductInput): Promise<ProductRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localCreateProduct(input);
     } catch (error) {
@@ -523,7 +559,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductR
 // ---------------------------------------------------------------------------
 
 export async function listCategories(): Promise<CatalogueCategoryRow[]> {
-  if (IS_LOCAL_PREVIEW) return localListCategories();
+  if (isLocalMode()) return localListCategories();
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase
     .from('catalogue_categories')
@@ -538,7 +574,7 @@ export async function createCategory(
   name: string,
   productType: CatalogueCategoryRow['product_type'],
 ): Promise<CatalogueCategoryRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localCreateCategory(name, productType);
     } catch (error) {
@@ -564,7 +600,7 @@ export async function createCategory(
 
 /** Removes a category; its products stay, uncategorised. */
 export async function deleteCategory(categoryId: string): Promise<void> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       localDeleteCategory(categoryId);
       return;
@@ -581,7 +617,7 @@ export async function setProductCategory(
   productId: string,
   categoryId: string | null,
 ): Promise<void> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       localSetProductCategory(productId, categoryId);
       return;
@@ -600,7 +636,7 @@ export async function setProductCategory(
 export async function deleteProduct(
   productId: string,
 ): Promise<{ deleted: boolean; archived: boolean }> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localDeleteProduct(productId);
     } catch (error) {
@@ -637,7 +673,7 @@ export async function transferBatchStock(input: {
   baseQty: number;
   reason?: string;
 }): Promise<MasterBatchRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localTransferBatchStock(input);
     } catch (error) {
@@ -745,7 +781,7 @@ export interface MemberDossier {
 }
 
 export async function getMemberDossier(memberId: string): Promise<MemberDossier | null> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     const db = readLocalDb();
     const rawMember = db.members.find((m) => m.id === memberId);
     if (!rawMember) return null;
@@ -899,7 +935,7 @@ export async function updateMemberCrmProfile(
   memberId: string,
   patch: LocalUpdateMemberCrmPatch,
 ): Promise<MemberRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localUpdateMemberCrmProfile(memberId, patch);
     } catch (error) {
@@ -937,7 +973,7 @@ export async function reviewMemberKyc(
   approve: boolean,
   reason?: string | null,
 ): Promise<MemberRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localReviewMemberKyc(memberId, approve, reason);
     } catch (error) {
@@ -955,7 +991,7 @@ export async function reviewMemberKyc(
 }
 
 export async function rotateMemberQrPass(memberId: string): Promise<string> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localRotateMemberQrToken(memberId);
     } catch (error) {
@@ -971,7 +1007,7 @@ export async function rotateMemberQrPass(memberId: string): Promise<string> {
 }
 
 export async function listCrmInteractions(memberId?: string): Promise<CrmInteractionRow[]> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     const all = readLocalDb().interactions;
     return (memberId ? all.filter((row) => row.member_id === memberId) : all).sort((a, b) =>
       b.created_at.localeCompare(a.created_at),
@@ -996,7 +1032,7 @@ export async function addCrmInteraction(input: {
   summary: string;
   followUpAt?: string | null;
 }): Promise<CrmInteractionRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localAddCrmInteraction(input);
     } catch (error) {
@@ -1024,7 +1060,7 @@ export async function toggleCrmFollowUp(
   interactionId: string,
   done: boolean,
 ): Promise<CrmInteractionRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localToggleCrmFollowUp(interactionId, done);
     } catch (error) {
@@ -1048,7 +1084,7 @@ export async function syncCartReservations(input: {
   items: { productId: string; baseQty: number }[];
   memberLabel?: string | null;
 }): Promise<void> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       localSyncCartHolds(input);
       return;
@@ -1070,7 +1106,7 @@ export async function syncCartReservations(input: {
 }
 
 export async function listActiveCartHolds(branchId?: string): Promise<CartStockHoldRow[]> {
-  if (IS_LOCAL_PREVIEW) return localListActiveCartHolds(branchId);
+  if (isLocalMode()) return localListActiveCartHolds(branchId);
   const supabase = createCartelBrowserClient();
   let query = supabase
     .from('inventory_reservations')
@@ -1087,7 +1123,7 @@ export async function listActiveCartHolds(branchId?: string): Promise<CartStockH
 export type CreateMemberInput = LocalCreateMemberInput;
 
 export async function createMember(input: LocalCreateMemberInput): Promise<MemberRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localCreateMember(input);
     } catch (error) {
@@ -1123,7 +1159,7 @@ export async function setMemberStatus(
   status: MemberRow['status'],
   reason?: string | null,
 ): Promise<MemberRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localSetMemberStatus(memberId, status, reason);
     } catch (error) {
@@ -1163,7 +1199,7 @@ export async function adjustMemberCredit(
   deltaCents: number,
   reason: string,
 ): Promise<MemberRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localAdjustMemberCredit(memberId, deltaCents, reason);
     } catch (error) {
@@ -1190,7 +1226,7 @@ export async function adjustMemberCredit(
 export async function saveLoyaltyRules(
   patch: Partial<LoyaltyRulesRow>,
 ): Promise<LoyaltyRulesRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localSaveLoyaltyRules(patch);
     } catch (error) {
@@ -1213,7 +1249,7 @@ export async function setAffiliateCommission(
   codeId: string,
   bps: number,
 ): Promise<AffiliateCodeRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localSetAffiliateCommission(codeId, bps);
     } catch (error) {
@@ -1235,7 +1271,7 @@ export async function settleCommission(
   attributionId: string,
   mode: 'CREDIT' | 'EFT',
 ): Promise<void> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       localSettleCommission(attributionId, mode);
       return;
@@ -1280,7 +1316,7 @@ export async function resolveDeliveryZone(
   lat: number,
   lng: number,
 ): Promise<ResolvedDeliveryZone | null> {
-  if (IS_LOCAL_PREVIEW) return localResolveDeliveryZone(branchId, lat, lng);
+  if (isLocalMode()) return localResolveDeliveryZone(branchId, lat, lng);
   const supabase = createCartelBrowserClient();
   const { data, error } = await supabase.rpc('resolve_delivery_zone', {
     p_branch_id: branchId,
@@ -1298,7 +1334,7 @@ export async function createMediaJob(input: {
   kind: string;
   params: Record<string, string | number | boolean>;
 }): Promise<ProductMediaJobRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localCreateMediaJob(input);
     } catch (error) {
@@ -1326,7 +1362,7 @@ export async function updateMediaJob(
   jobId: string,
   patch: Partial<ProductMediaJobRow>,
 ): Promise<ProductMediaJobRow> {
-  if (IS_LOCAL_PREVIEW) {
+  if (isLocalMode()) {
     try {
       return localUpdateMediaJob(jobId, patch);
     } catch (error) {
@@ -1369,7 +1405,7 @@ function notifyLiveListeners() {
  * shared channel.
  */
 export function subscribeToData(listener: () => void): () => void {
-  if (IS_LOCAL_PREVIEW) return subscribeLocalDb(listener);
+  if (isLocalMode()) return subscribeLocalDb(listener);
   if (typeof window === 'undefined') return () => undefined;
 
   liveListeners.add(listener);

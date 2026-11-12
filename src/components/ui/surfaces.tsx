@@ -16,8 +16,9 @@ export function Card({
     <div
       data-active={active || undefined}
       className={cn(
-        'bg-surface',
-        interactive ? 'hairline-active cursor-pointer' : 'border border-hairline',
+        'bg-surface transition-colors duration-200',
+        interactive ? 'hairline-active cursor-pointer hover:border-gold/40' : 'border border-hairline',
+        active && 'border-gold',
         className,
       )}
       {...props}
@@ -30,7 +31,7 @@ export function GlassPanel({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 const BADGE_TONES = {
-  gold: 'border-foreground text-foreground',
+  gold: 'border-gold/40 bg-gold/5 text-gold',
   mono: 'border-ash text-ash',
   live: 'border-foreground text-foreground',
   warn: 'border-foreground text-foreground',
@@ -47,7 +48,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 border px-2 py-1 font-mono type-ui ',
+        'inline-flex items-center gap-1.5 border px-2 py-0.5 text-xs sm:text-sm font-mono',
         BADGE_TONES[tone],
         className,
       )}
@@ -71,19 +72,19 @@ export function Stat({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
-      <span className="font-mono type-ui text-ash">
+    <div className={cn('flex flex-col gap-0.5 sm:gap-1', className)}>
+      <span className="font-mono text-xs sm:type-ui text-ash">
         {label}
       </span>
       <span
         className={cn(
-          'font-mono text-xl tabular-nums leading-none',
-          tone === 'gold' && 'text-foreground',
+          'font-mono text-lg sm:text-xl tabular-nums leading-none',
+          tone === 'gold' && 'text-gold',
           tone === 'muted' && 'text-ash',
         )}
       >
         {value}
-        {unit ? <span className="ml-1 type-ui text-ash">{unit}</span> : null}
+        {unit ? <span className="ml-1 text-xs sm:type-ui text-ash">{unit}</span> : null}
       </span>
     </div>
   );

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { IS_LOCAL_PREVIEW } from '@/lib/data/source';
+import { IS_LOCAL_PREVIEW, isDemoModeActive } from '@/lib/data/source';
 import { createCartelBrowserClient } from '@/lib/supabase/client';
 import { useSessionStore } from '@/lib/store/session';
 
@@ -24,7 +25,9 @@ import { useSessionStore } from '@/lib/store/session';
  * Profile icon links to /account. Explicit "Log in" link rendered for unauthenticated visitors.
  * When signed in, member code or "Dossier" badge is displayed.
  *
- * The POS and Admin links only render for active staff.
+ * The POS, IMS and Admin links are hidden from the menu while the site is being
+ * presented to a client (see SHOW_STAFF_LINKS); those surfaces are reached
+ * through the Demo Hub, or directly at /admin/login.
  */
 
 const LINKS = [
@@ -36,9 +39,17 @@ const LINKS = [
 ];
 
 const STAFF_LINKS = [
-  { label: 'POS', href: '/admin/pos' },
+  { label: 'POS', href: '/pos' },
+  { label: 'IMS', href: '/admin/inventory' },
   { label: 'Admin', href: '/admin' },
 ];
+
+/**
+ * Client-presentation switch. While false, POS / IMS / Admin never appear in
+ * the desktop menu or the mobile drawer, for anyone. Set to true to show them
+ * to signed-in staff again.
+ */
+const SHOW_STAFF_LINKS = false;
 
 export function CartelCommandNav() {
   const pathname = usePathname();
@@ -74,7 +85,10 @@ export function CartelCommandNav() {
   }, [isOpen]);
 
   useEffect(() => {
-    if (IS_LOCAL_PREVIEW) return;
+    if (isDemoModeActive() || IS_LOCAL_PREVIEW) {
+      setIsStaff(true);
+      return;
+    }
     let cancelled = false;
 
     void (async () => {
@@ -109,7 +123,8 @@ export function CartelCommandNav() {
     };
   }, [pathname]);
 
-  const links = isStaff ? [...LINKS, ...STAFF_LINKS] : LINKS;
+  const showStaffLinks = SHOW_STAFF_LINKS && isStaff;
+  const links = showStaffLinks ? [...LINKS, ...STAFF_LINKS] : LINKS;
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const profileActive = ['/account', '/login', '/pass'].some((href) => pathname.startsWith(href));
 
@@ -117,13 +132,22 @@ export function CartelCommandNav() {
     <header className="relative flex items-center justify-between gap-6 bg-void px-4 pb-4 pt-6 print:hidden md:px-12 md:pb-6 md:pt-8">
       {/* Brand logo, alone, at the same size on every page */}
       <Link href="/" aria-label="420 Cartel home" className="brand-mark block shrink-0">
-        <div className="brand-mark-inner">
-          <BrandLogo priority />
+        <div className="brand-mark-inner flex items-center gap-3">
+          <div className="relative size-10 overflow-hidden rounded-full border border-gold/30 md:hidden">
+            <Image
+              src="/fourtwentycartel_logo.jpg"
+              alt="420 Cartel"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
+          <BrandLogo priority className="hidden md:block" />
         </div>
       </Link>
 
       {/* Desktop navigation: every option visible, white, gold on hover */}
-      <nav aria-label="Main" className="hidden items-center gap-x-6 md:flex lg:gap-x-10">
+      <nav aria-label="Main" className="hidden md:flex items-center gap-x-6 lg:gap-x-10">
         {links.map((link) => (
           <Link
             key={link.href}
@@ -152,6 +176,15 @@ export function CartelCommandNav() {
             {member.member_code ? member.member_code : 'Dossier'}
           </Link>
         )}
+
+        <Link
+          href="/demo"
+          aria-current={isActive('/demo') ? 'page' : undefined}
+          className="inline-flex items-center gap-1.5 rounded border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-[13px] uppercase tracking-wider text-gold hover:border-gold hover:bg-gold/20 transition-colors"
+        >
+          <span className="size-1.5 rounded-full bg-gold animate-pulse" />
+          Demo Hub
+        </Link>
 
         <Link
           href="/account"
@@ -202,7 +235,16 @@ export function CartelCommandNav() {
                 href="/"
                 onClick={() => setIsOpen(false)}
                 aria-label="420 Cartel home"
+                className="flex items-center gap-3"
               >
+                <div className="relative size-10 overflow-hidden rounded-full border border-gold/30">
+                  <Image
+                    src="/fourtwentycartel_logo.jpg"
+                    alt="420 Cartel"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
                 <BrandLogo />
               </Link>
               <button
@@ -217,7 +259,19 @@ export function CartelCommandNav() {
 
             {/* Navigation Links in exact order */}
             <nav className="flex flex-col gap-1 py-6">
-              {LINKS.map((link) => (
+              <Link
+                href="/demo"
+                onClick={() => setIsOpen(false)}
+                className="mb-3 flex items-center justify-between rounded border border-gold/40 bg-gold/10 px-3.5 py-2.5 font-mono text-sm uppercase tracking-wider text-gold hover:bg-gold/20"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="size-2 animate-pulse rounded-full bg-gold" />
+                  Launch Demo Hub
+                </span>
+                <span className="text-xs text-ash">&rarr;</span>
+              </Link>
+
+              {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -245,7 +299,7 @@ export function CartelCommandNav() {
                 <Link
                   href="/onboarding"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center py-3 px-4 bg-white text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-neutral-200 transition-colors"
+                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-colors"
                 >
                   Apply for Membership
                 </Link>
@@ -277,7 +331,7 @@ export function CartelCommandNav() {
                 <Link
                   href="/pass"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center py-3 px-4 bg-white text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-neutral-200 transition-colors"
+                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-colors"
                 >
                   Digital Membership Pass
                 </Link>
@@ -285,7 +339,7 @@ export function CartelCommandNav() {
             )}
 
             {/* Staff links if staff session */}
-            {isStaff ? (
+            {showStaffLinks ? (
               <div className="pt-3 border-t border-foreground/10 flex flex-col gap-2">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-ash">Staff Operations</span>
                 <div className="grid grid-cols-2 gap-2">

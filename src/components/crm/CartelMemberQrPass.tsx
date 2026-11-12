@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Check, Copy, Download, ShieldCheck, ShieldX } from 'lucide-react';
 import { QrCode } from '@/components/ui/QrCode';
@@ -140,34 +141,43 @@ export function CartelMemberQrPass({
   }, [member]);
 
   return (
-    <div className={cn('w-full max-w-sm', className)}>
+    <div className={cn('w-full max-w-sm mx-auto', className)}>
       <div className="border-2 border-foreground bg-void ">
         {/* Gold foil header */}
-        <div className="bg-foreground px-5 py-3.5">
+        <div className="bg-foreground px-4 py-3 sm:px-5 sm:py-3.5">
           <div className="flex items-center justify-between">
-            <BrandLogo />
-            <span className="font-mono type-ui font-medium text-black/80">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/fourtwentycartel_logo.jpg"
+                alt="420 Cartel"
+                width={28}
+                height={28}
+                className="rounded-full sm:size-8"
+              />
+              <BrandLogo />
+            </div>
+            <span className="font-mono text-xs sm:type-ui font-medium text-black/80">
               Member Pass
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-5 p-5">
+        <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-5">
           <div>
-            <p className="font-mono type-ui text-ash">
+            <p className="font-mono text-xs sm:type-ui text-ash">
               Private Botanical Collective
             </p>
-            <p className="mt-2.5 font-display text-2xl font-black uppercase leading-none text-white">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-black uppercase leading-tight text-white">
               {member.first_name} {member.last_name}
             </p>
-            <p className="mt-1.5 font-mono text-lg text-foreground">
+            <p className="mt-1 font-mono text-base sm:text-lg text-foreground">
               {member.member_code}
             </p>
           </div>
 
           <div className="h-px w-full bg-[color:var(--border-mono)]" />
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:gap-x-4 sm:gap-y-4">
             <PassStat label="Rank" value={RANK_LABEL[member.rank]} />
             <PassStat label="Standing" value={member.status.replace(/_/g, ' ')} />
             <PassStat label="Store Credit" value={formatCents(member.credit_balance_cents)} />
@@ -176,27 +186,27 @@ export function CartelMemberQrPass({
 
           <div>
             {verified ? (
-              <Badge tone="live" className="w-full justify-center py-1.5">
-                <ShieldCheck className="size-3" />
-                {LEGAL_AGE}+ Age Verified{age !== null ? ` · ${age} yrs` : ''}
+              <Badge tone="live" className="w-full justify-center py-1 sm:py-1.5 text-xs sm:text-sm">
+                <ShieldCheck className="size-3 shrink-0" />
+                <span>{LEGAL_AGE}+ Age Verified{age !== null ? ` · ${age} yrs` : ''}</span>
               </Badge>
             ) : (
-              <Badge tone="warn" className="w-full justify-center py-1.5">
-                <ShieldX className="size-3" />
-                Age Verification Pending
+              <Badge tone="warn" className="w-full justify-center py-1 sm:py-1.5 text-xs sm:text-sm">
+                <ShieldX className="size-3 shrink-0" />
+                <span>Age Verification Pending</span>
               </Badge>
             )}
           </div>
 
           {/* QR — encodes the member code the till scanner resolves. */}
-          <div className="flex flex-col items-center gap-3 bg-white p-4">
-            <QrCode value={member.member_code} size={168} title={`Pass for ${member.member_code}`} />
-            <span className="font-mono type-ui text-foreground">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 bg-white p-3 sm:p-4">
+            <QrCode value={member.member_code} size={150} title={`Pass for ${member.member_code}`} />
+            <span className="font-mono text-xs sm:type-ui text-foreground font-bold">
               {member.member_code}
             </span>
           </div>
 
-          <p className="text-center font-mono type-ui leading-relaxed text-ash">
+          <p className="text-center font-mono text-[11px] sm:text-xs leading-relaxed text-ash">
             Present at the vault · Not transferable · Adults {LEGAL_AGE}+ only
           </p>
         </div>
@@ -207,7 +217,7 @@ export function CartelMemberQrPass({
               variant="ghost"
               size="sm"
               onClick={downloadPass}
-              className="h-12 border-r border-[color:var(--border-mono)] hover:text-foreground"
+              className="h-11 sm:h-12 text-xs sm:text-sm border-r border-[color:var(--border-mono)] hover:text-foreground"
             >
               <Download className="size-3.5" />
               Download
@@ -216,7 +226,7 @@ export function CartelMemberQrPass({
               variant="ghost"
               size="sm"
               onClick={copyReferral}
-              className="h-12 hover:text-foreground"
+              className="h-11 sm:h-12 text-xs sm:text-sm hover:text-foreground"
             >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
               {copied ? 'Copied' : 'Referral Link'}
@@ -226,7 +236,7 @@ export function CartelMemberQrPass({
       </div>
 
       {!compact ? (
-        <p className="mt-3 break-all font-mono type-ui leading-relaxed text-ash">
+        <p className="mt-2.5 break-all font-mono text-[11px] sm:text-xs leading-relaxed text-ash text-center sm:text-left">
           {referralLink}
         </p>
       ) : null}
@@ -236,11 +246,11 @@ export function CartelMemberQrPass({
 
 function PassStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-mono type-ui text-ash">
+    <div className="flex flex-col gap-0.5">
+      <span className="font-mono text-[11px] sm:text-xs text-ash">
         {label}
       </span>
-      <span className="font-mono type-ui tabular-nums text-white">{value}</span>
+      <span className="font-mono text-xs sm:text-sm tabular-nums text-white font-medium">{value}</span>
     </div>
   );
 }

@@ -24,7 +24,7 @@ import { Delete, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge, Card, Eyebrow } from '@/components/ui/surfaces';
 import { createCartelBrowserClient } from '@/lib/supabase/client';
-import { IS_LOCAL_PREVIEW } from '@/lib/data/source';
+import { IS_LOCAL_PREVIEW, isDemoModeActive } from '@/lib/data/source';
 import { cn } from '@/lib/utils';
 
 const UNLOCK_KEY = 'cartel.pos.unlocked';
@@ -100,7 +100,7 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
   // Resume an unlock from earlier in the same tab, then ask Postgres whether
   // this operator even has a PIN configured.
   useEffect(() => {
-    if (previewUnlocked || IS_LOCAL_PREVIEW) {
+    if (previewUnlocked || IS_LOCAL_PREVIEW || isDemoModeActive()) {
       setState('UNLOCKED');
       return;
     }
@@ -160,6 +160,12 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
     setError(null);
 
     try {
+      // Demo sessions accept any PIN. A real till always checks the operator's own PIN.
+      if (IS_LOCAL_PREVIEW || isDemoModeActive()) {
+        unlock();
+        return;
+      }
+
       const supabase = createCartelBrowserClient();
       const { data, error: rpcError } = await supabase.rpc('verify_pos_pin', { p_pin: pin });
 
@@ -382,6 +388,19 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
           {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
           Unlock terminal
         </Button>
+
+        {/* Demo only: never offer a way round the PIN on a real, signed-in till. */}
+        {IS_LOCAL_PREVIEW || isDemoModeActive() ? (
+          <Button
+            variant="outline"
+            size="sm"
+            block
+            onClick={() => unlock()}
+            className="border-dashed font-mono text-xs text-ash hover:text-white"
+          >
+            Quick Demo Bypass (Skip PIN)
+          </Button>
+        ) : null}
       </Card>
     </main>
   );

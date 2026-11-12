@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Building2,
   Check,
+  ChevronDown,
   CreditCard,
   Loader2,
   Lock,
@@ -166,6 +167,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ProcessOrderResult | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   useCartReservationSync();
 
@@ -415,47 +417,49 @@ export default function CheckoutPage() {
   // --- Receipt view after order completes ---------------------------------
   if (receipt) {
     return (
-      <main className="relative min-h-screen bg-void pb-32 pt-14">
+      <main className="relative min-h-screen bg-void pb-20 pt-8 sm:pb-32 sm:pt-14">
         <div className="container max-w-2xl">
-          <Card className="border-ash p-6 sm:p-10">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+          <Card className="border-ash p-4 sm:p-10">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <Badge tone="live">
                   <Check className="size-3" />
                   Allocation Confirmed
                 </Badge>
-                <h1 className="mt-3 font-display text-3xl uppercase text-white">
+                <h1 className="mt-3 font-display text-2xl sm:text-3xl uppercase text-white">
                   Order <span className="">{receipt.order_number}</span>
                 </h1>
-                <p className="mt-1 font-mono type-ui text-ash">
+                <p className="mt-1 font-mono text-xs sm:type-ui text-ash">
                   {receipt.fulfilment_type.replace(/_/g, ' ')} · Status: {receipt.status}
                 </p>
               </div>
-              <QrCode value={receipt.order_number} size={96} />
+              <div className="self-start sm:self-auto bg-white p-1.5 sm:p-0 sm:bg-transparent">
+                <QrCode value={receipt.order_number} size={88} />
+              </div>
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-5 sm:my-6" />
 
             <div className="space-y-3">
               <Eyebrow>Allocated Lines & Batch Traceability</Eyebrow>
               {receipt.items.map((item, idx) => (
                 <div
                   key={`${item.product_name}-${idx}`}
-                  className="flex flex-col gap-1 border border-[color:var(--border-mono)] bg-void/60 p-3.5"
+                  className="flex flex-col gap-1 border border-[color:var(--border-mono)] bg-void/60 p-3 sm:p-3.5"
                 >
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-display text-sm uppercase text-white">
+                    <span className="font-display text-xs sm:text-sm uppercase text-white">
                       {item.quantity}× {item.product_name} ({item.variant_label})
                     </span>
-                    <span className="font-mono type-ui tabular-nums text-foreground">
+                    <span className="font-mono text-xs sm:type-ui tabular-nums text-foreground shrink-0">
                       {formatCents(item.line_total_cents)}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-mono type-ui text-ash">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 font-mono text-[11px] sm:text-xs text-ash">
                     <span>
                       Deducted: {formatBaseQty(item.base_qty, item.base_uom)} from vault
                     </span>
-                    <span>
+                    <span className="truncate">
                       Batches:{' '}
                       {item.batch_allocation
                         .map((b) => `${b.batch_code} (${formatBaseQty(b.base_qty, item.base_uom)})`)
@@ -466,9 +470,9 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-5 sm:my-6" />
 
-            <dl className="space-y-2 font-mono type-ui">
+            <dl className="space-y-1.5 sm:space-y-2 font-mono text-xs sm:type-ui">
               <div className="flex justify-between text-ash">
                 <dt>Subtotal</dt>
                 <dd className="tabular-nums">{formatCents(receipt.subtotal_cents)}</dd>
@@ -491,27 +495,27 @@ export default function CheckoutPage() {
                 <dt>15% SA VAT Included</dt>
                 <dd className="tabular-nums">{formatCents(vatPortionCents(receipt.total_cents))}</dd>
               </div>
-              <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-3 type-ui text-white">
+              <div className="flex justify-between border-t border-[color:var(--border-mono)] pt-3 text-sm sm:type-ui text-white font-bold">
                 <dt className="">Total Settled</dt>
                 <dd className="tabular-nums text-foreground">{formatCents(receipt.total_cents)}</dd>
               </div>
             </dl>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-ash bg-transparent px-4 py-3 font-mono type-ui text-foreground">
+            <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 border border-ash bg-transparent px-3.5 py-2.5 sm:px-4 sm:py-3 font-mono text-xs sm:type-ui text-foreground">
               <span>+{receipt.points_earned} Loyalty Points Accrued</span>
               {receipt.points_redeemed > 0 ? (
                 <span>-{receipt.points_redeemed} Points Redeemed</span>
               ) : null}
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3 print:hidden">
-              <Button variant="gold" size="lg" asChild>
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 print:hidden">
+              <Button variant="gold" size="lg" asChild className="w-full sm:w-auto h-12 sm:h-14 px-6">
                 <Link href="/shop">
                   Return to Dispensary
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" onClick={() => window.print()}>
+              <Button variant="outline" size="lg" onClick={() => window.print()} className="w-full sm:w-auto h-12 sm:h-14 px-6">
                 <Printer className="size-4" />
                 Print Allocation Docket
               </Button>

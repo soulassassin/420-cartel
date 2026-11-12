@@ -16,7 +16,7 @@ export const Label = React.forwardRef<
   <LabelPrimitive.Root
     ref={ref}
     className={cn(
-      'font-mono type-ui text-ash',
+      'font-mono text-xs sm:type-ui text-ash',
       className,
     )}
     {...props}
@@ -30,7 +30,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       ref={ref}
       type={type}
       className={cn(
-        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground ',
+        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-base sm:type-ui text-foreground ',
         'placeholder:text-ash focus:border-foreground focus:outline-none ',
         'disabled:cursor-not-allowed disabled:opacity-40',
         'aria-[invalid=true]:border-foreground',
@@ -49,7 +49,7 @@ export const Select = React.forwardRef<
   <select
     ref={ref}
     className={cn(
-      'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 type-ui text-foreground ',
+      'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-base sm:type-ui text-foreground ',
       'focus:border-foreground focus:outline-none ',
       'disabled:cursor-not-allowed disabled:opacity-40',
       'aria-[invalid=true]:border-foreground',
@@ -69,7 +69,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'min-h-24 w-full resize-y border border-[color:var(--border-mono)] bg-surface px-4 py-3 type-ui text-foreground ',
+      'min-h-24 w-full resize-y border border-[color:var(--border-mono)] bg-surface px-4 py-3 text-base sm:type-ui text-foreground ',
       'placeholder:text-ash focus:border-foreground focus:outline-none ',
       'cartel-scroll',
       className,
@@ -91,7 +91,7 @@ export const NumericInput = React.forwardRef<
       inputMode="decimal"
       autoComplete="off"
       className={cn(
-        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-right font-mono text-lg tabular-nums text-foreground ',
+        'h-12 w-full border border-[color:var(--border-mono)] bg-surface px-4 text-right font-mono text-base sm:text-lg tabular-nums text-foreground ',
         'placeholder:text-ash focus:border-foreground focus:outline-none ',
         suffix ? 'pr-12' : '',
         className,
@@ -99,7 +99,7 @@ export const NumericInput = React.forwardRef<
       {...props}
     />
     {suffix ? (
-      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-mono type-ui text-foreground">
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-mono text-xs sm:type-ui text-foreground">
         {suffix}
       </span>
     ) : null}
@@ -127,19 +127,19 @@ export function Field({
   className,
 }: FieldProps) {
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-1.5 sm:gap-2', className)}>
       <div className="flex items-baseline justify-between gap-3">
         <Label htmlFor={htmlFor}>
           {label}
           {required ? <span className="ml-1 text-foreground">*</span> : null}
         </Label>
         {hint && !error ? (
-          <span className="font-mono type-ui text-ash">{hint}</span>
+          <span className="font-mono text-xs sm:type-ui text-ash">{hint}</span>
         ) : null}
       </div>
       {children}
       {error ? (
-        <p role="alert" className="font-mono type-ui text-foreground">
+        <p role="alert" className="font-mono text-xs sm:type-ui text-foreground">
           {error}
         </p>
       ) : null}

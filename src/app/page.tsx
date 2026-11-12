@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { CountUp } from '@/components/home/CountUp';
@@ -24,16 +25,19 @@ import { PUBLIC_BRANCHES } from '@/lib/branches';
 
 // Listed row by row. Every tile shares one shape so rows and columns align.
 const TILES = [
-  { name: 'Black Truffle Gold', tagline: 'Indoor-cured. Allocation only.', slug: 'black-truffle-gold' },
-  { name: 'Jozi Lemon Haze', tagline: 'Citrus-forward daylight sativa.', slug: 'jozi-lemon-haze' },
-  { name: 'Gold Standard CBD Elixir', tagline: 'Broad-spectrum CBD.', slug: 'gold-standard-cbd-elixir' },
-  { name: 'Obsidian Rosin Dropper', tagline: 'Solventless live rosin in MCT.', slug: 'obsidian-rosin-dropper' },
-  { name: 'Imperial Hash Hole', tagline: '2g donut-rolled, hash-cored.', slug: 'imperial-hash-hole' },
-  { name: '24K Gold Dust Truffles', tagline: '10mg per truffle.', slug: '24k-gold-dust-truffles' },
+  { name: 'Black Truffle Gold', tagline: 'Indoor craft indica. Trichome-drenched.', slug: 'black-truffle-gold' },
+  { name: 'Candy Games #38', tagline: 'Chunky indoor craft bud. Heavy frost.', slug: 'candy-games-38' },
+  { name: 'Hydroponic RS-11', tagline: 'Deep water culture. Diamond trichome frost.', slug: 'hydro-rs11' },
+  { name: 'Valley Sun Tangie', tagline: 'Sun-grown greenhouse. Sweet citrus zest.', slug: 'valley-sun-tangie' },
+  { name: 'Jozi Lemon Haze', tagline: 'Bright daylight sativa. Citrus-forward.', slug: 'jozi-lemon-haze' },
+  { name: 'Hydro Mac 1', tagline: 'Closed-loop hydro craft. White-out frost.', slug: 'hydro-mac1' },
+  { name: 'Obsidian Rosin Dropper', tagline: 'Solventless live rosin in MCT. Sublingual.', slug: 'obsidian-rosin-dropper' },
+  { name: 'Imperial Hash Hole', tagline: '2g donut-rolled, temple-hash-cored.', slug: 'imperial-hash-hole' },
+  { name: '24K Gold Dust Truffles', tagline: '10mg per truffle. Edible gold leaf.', slug: '24k-gold-dust-truffles' },
 ];
 
 const RANGE = [
-  { title: 'Flower', detail: 'Small-batch indoor craft flower.', sizes: '1g · 3.5g · 7g · 28g', slug: 'jozi-lemon-haze' },
+  { title: 'Flower', detail: 'Greenhouse, indoor and hydro small-batch craft flower.', sizes: '1g · 3.5g · 7g · 28g', slug: 'candy-games-38' },
   { title: 'Elixirs', detail: 'Solventless rosin and broad-spectrum CBD, dosed by the millilitre.', sizes: '5ml · 10ml · 30ml', slug: 'obsidian-rosin-dropper' },
   { title: 'Pre-rolls', detail: 'Hand-rolled and hash-cored, finished with a glass tip.', sizes: 'Singles and packs', slug: 'imperial-hash-hole' },
   { title: 'Edibles', detail: 'Dark chocolate truffles, precisely dosed and boxed in sixes.', sizes: '10mg per truffle', slug: '24k-gold-dust-truffles' },
@@ -412,7 +416,16 @@ export default function LandingPage() {
       </section>
 
       <footer className="overflow-hidden pb-4 pt-16 md:pt-24">
-        <BrandLogo className="mb-8" />
+        <div className="flex items-center gap-4 mb-8">
+          <Image
+            src="/fourtwentycartel_logo.jpg"
+            alt="420 Cartel"
+            width={64}
+            height={64}
+            className="rounded-full border border-gold/30 object-cover"
+          />
+          <BrandLogo />
+        </div>
         <div className="flex flex-wrap justify-between gap-x-12 gap-y-4 text-base">
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
             {FOOTER_LINKS.map((link) => (

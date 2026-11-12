@@ -68,14 +68,14 @@ export function SaIdField({
       <div
         id={`${name}-readout`}
         aria-live="polite"
-        className="min-h-[4.5rem] border border-[color:var(--border-mono)] bg-void px-4 py-3"
+        className="min-h-[4rem] h-auto border border-[color:var(--border-mono)] bg-void p-3 sm:px-4 sm:py-3"
       >
         {!showFeedback ? (
-          <p className="font-mono type-ui text-ash">
+          <p className="font-mono text-xs sm:type-ui text-ash">
             Date of birth is read from your ID number
           </p>
         ) : result.valid ? (
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-3">
             <Stat label="Date of Birth" value={result.dateOfBirth} tone="gold" />
             <Stat
               label="Age"
@@ -90,27 +90,29 @@ export function SaIdField({
                 tone="muted"
               />
             ) : null}
-            {underage ? (
-              <Badge tone="danger">
-                <ShieldAlert className="size-3" />
-                Under {LEGAL_AGE}
-              </Badge>
-            ) : (
-              <Badge tone="live">
-                <CheckCircle2 className="size-3" />
-                {LEGAL_AGE}+ Verified
-              </Badge>
-            )}
+            <div className="col-span-2 sm:col-span-1 sm:ml-auto flex items-center justify-start sm:justify-end">
+              {underage ? (
+                <Badge tone="danger" className="w-full sm:w-auto justify-center">
+                  <ShieldAlert className="size-3" />
+                  Under {LEGAL_AGE}
+                </Badge>
+              ) : (
+                <Badge tone="live" className="w-full sm:w-auto justify-center">
+                  <CheckCircle2 className="size-3" />
+                  {LEGAL_AGE}+ Verified
+                </Badge>
+              )}
+            </div>
           </div>
         ) : (
-          <p className="font-mono type-ui text-ash">
+          <p className="font-mono text-xs sm:type-ui text-ash">
             {digits.length}/13 digits
           </p>
         )}
       </div>
 
       {underage ? (
-        <p role="alert" className="font-mono type-ui leading-relaxed text-foreground">
+        <p role="alert" className="font-mono text-xs sm:type-ui leading-relaxed text-foreground">
           420 Cartel is a private collective for adults {LEGAL_AGE} and over. We cannot process
           this application.
         </p>

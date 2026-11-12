@@ -21,7 +21,13 @@ const STAFF_ROUTES = ['/pos', '/admin'];
 const STAFF_LOGIN = '/admin/login';
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -43,6 +49,34 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Demo mode detection: query param, cookie, or explicit environment opt-in
+  const demoParam = request.nextUrl.searchParams.get('demo');
+  const isDemoParamActive = demoParam === '1' || demoParam === 'true';
+  const isDemoParamInactive = demoParam === '0' || demoParam === 'false';
+
+  if (isDemoParamActive) {
+    response.cookies.set({
+      name: 'cartel_demo_mode',
+      value: 'true',
+      maxAge: 86400,
+      sameSite: 'lax',
+      path: '/',
+    });
+  } else if (isDemoParamInactive) {
+    response.cookies.set({
+      name: 'cartel_demo_mode',
+      value: '',
+      maxAge: 0,
+      path: '/',
+    });
+  }
+
+  const isDemo =
+    (isDemoParamActive ||
+      request.cookies.get('cartel_demo_mode')?.value === 'true' ||
+      process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1') &&
+    !isDemoParamInactive;
+
   // Without Supabase configured, let every request through untouched rather
   // than locking the developer out of their own app.
   if (!url || !anonKey) return response;
@@ -56,7 +90,11 @@ export async function middleware(request: NextRequest) {
         for (const { name, value } of cookiesToSet) {
           request.cookies.set(name, value);
         }
-        response = NextResponse.next({ request });
+        response = NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
         for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, options);
         }
@@ -70,16 +108,25 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const needsMember = MEMBER_ROUTES.some((route) => path.startsWith(route));
+  const needsMember = !isDemo && MEMBER_ROUTES.some((route) => path.startsWith(route));
   const needsStaff =
-    path !== STAFF_LOGIN && STAFF_ROUTES.some((route) => path.startsWith(route));
+    !isDemo &&
+    path !== STAFF_LOGIN &&
+    STAFF_ROUTES.some((route) => path.startsWith(route));
 
   // The Vault sends strangers to Membership; profile pages ask them to log in.
   if ((needsMember || needsStaff) && !user) {
     const target = request.nextUrl.clone();
     const profilePage = path.startsWith('/account') || path.startsWith('/pass');
     target.pathname = needsStaff ? STAFF_LOGIN : profilePage ? '/login' : '/onboarding';
-    target.searchParams.set('next', path);
+    if (needsStaff) {
+      // Carry the query inside `next` (e.g. /admin/pos?member=CARTEL-0420), so
+      // a scanned member pass still opens that member once the operator signs in.
+      target.search = '';
+      target.searchParams.set('next', path + request.nextUrl.search);
+    } else {
+      target.searchParams.set('next', path);
+    }
     return NextResponse.redirect(target);
   }
 

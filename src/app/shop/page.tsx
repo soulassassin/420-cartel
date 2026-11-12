@@ -34,6 +34,7 @@ import {
   IS_LOCAL_PREVIEW,
   listBranches,
   listCatalogue,
+  listCategories,
   listMembers,
   subscribeToData,
   type CatalogueEntry,
@@ -85,6 +86,7 @@ export default function ShopPage() {
   const syncMember = useSessionStore((state) => state.syncMember);
 
   const [tab, setTab] = useState<TabKey>('ALL');
+  const [gradeFilter, setGradeFilter] = useState<string>('ALL');
   const [cartOpen, setCartOpen] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -100,6 +102,12 @@ export default function ShopPage() {
 
   const branchesQuery = useCartelQuery(() => listBranches(), []);
   const branches = useMemo(() => branchesQuery.data ?? [], [branchesQuery.data]);
+  const categoriesQuery = useCartelQuery(() => listCategories(), []);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const gradeNameById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories],
+  );
   const catalogue = useCartelQuery(() => listCatalogue(branchId), [branchId]);
 
   useEffect(() => {
@@ -158,33 +166,37 @@ export default function ShopPage() {
 
   const entries = useMemo(() => {
     const all = catalogue.data ?? [];
-    if (tab === 'ALL') return all;
-    return all.filter((entry) => entry.product.category === tab);
-  }, [catalogue.data, tab]);
+    return all.filter((entry) => {
+      if (tab !== 'ALL' && entry.product.category !== tab) return false;
+      if (gradeFilter !== 'ALL' && entry.product.category_id !== gradeFilter) return false;
+      return true;
+    });
+  }, [catalogue.data, tab, gradeFilter]);
 
   const cartCount = useCartStore(selectCartCount);
+  const cartSubtotal = useCartStore(selectCartSubtotalCents);
 
   return (
-    <main className="relative min-h-screen bg-void pb-32">
+    <main className="relative min-h-screen bg-void pb-28 sm:pb-32">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-96 " />
 
-      <div className="container relative pt-14">
-        <header className="flex flex-wrap items-end justify-between gap-6">
+      <div className="container relative pt-8 sm:pt-14">
+        <header className="flex flex-wrap items-end justify-between gap-5 sm:gap-6">
           <div>
             <Eyebrow>Private Reserve Catalogue</Eyebrow>
-            <h1 className="mt-3 display-md text-white">
+            <h1 className="mt-2 sm:mt-3 font-display text-3xl uppercase text-white sm:text-4xl md:text-display-md">
               The <span className="">Vault</span>
             </h1>
-            <p className="mt-3 max-w-xl type-ui leading-relaxed text-ash">
+            <p className="mt-2 sm:mt-3 max-w-xl text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
               Small-batch allocations drawn from live vault balances. Every tier shows exactly what
               it deducts in grams, millilitres or units.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-col sm:w-auto sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3">
             {branches.length > 0 ? (
-              <label className="flex items-center gap-2 border border-[color:var(--border-subtle)] bg-surface px-3 py-2.5 font-mono type-ui text-white">
-                <Building2 className="size-4 text-gold" />
+              <label className="flex w-full sm:w-auto items-center gap-2 border border-[color:var(--border-subtle)] bg-surface px-3 py-2.5 font-mono text-xs sm:type-ui text-white">
+                <Building2 className="size-4 shrink-0 text-gold" />
                 <select
                   aria-label="Fulfilling Dispensary Branch"
                   value={branchId}
@@ -192,7 +204,7 @@ export default function ShopPage() {
                     setNotice(null);
                     setBranch(e.target.value);
                   }}
-                  className="bg-transparent font-mono type-ui text-white focus:outline-none"
+                  className="w-full bg-transparent font-mono text-xs sm:type-ui text-white focus:outline-none"
                 >
                   {branches.map((branch) => (
                     <option key={branch.id} value={branch.id} className="bg-surface text-white">
@@ -204,24 +216,29 @@ export default function ShopPage() {
             ) : null}
 
             {member ? (
-              <Card className="flex items-center gap-3 px-4 py-2.5">
-                <ShieldCheck className="size-4 text-foreground" />
-                <div className="flex flex-col">
-                  <span className="font-mono type-ui text-foreground">
+              <Card className="flex w-full sm:w-auto items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5">
+                <ShieldCheck className="size-4 shrink-0 text-foreground" />
+                <div className="flex flex-row sm:flex-col items-baseline sm:items-start justify-between w-full sm:w-auto gap-2 sm:gap-0">
+                  <span className="font-mono text-xs sm:type-ui text-foreground">
                     {member.member_code}
                   </span>
-                  <span className="font-mono type-ui text-ash">
+                  <span className="font-mono text-[11px] sm:type-ui text-ash">
                     {isVipStanding(member) ? 'VIP Pricing Active' : member.status.replace(/_/g, ' ')}
                   </span>
                 </div>
               </Card>
             ) : null}
 
-            <Button variant="gold" size="lg" onClick={() => setCartOpen(true)}>
+            <Button
+              variant="gold"
+              size="lg"
+              onClick={() => setCartOpen(true)}
+              className="w-full sm:w-auto h-11 sm:h-14 px-5"
+            >
               <ShoppingBag className="size-4" />
               Crate
               {cartCount > 0 ? (
-                <span className="ml-1 bg-void px-1.5 font-mono type-ui text-foreground">
+                <span className="ml-1 bg-void px-1.5 font-mono text-xs sm:type-ui text-foreground">
                   {cartCount}
                 </span>
               ) : null}
@@ -230,45 +247,78 @@ export default function ShopPage() {
         </header>
 
         {/* Category tabs */}
-        <div
-          role="tablist"
-          aria-label="Catalogue categories"
-          className="mt-10 flex flex-wrap gap-2 border-b border-[color:var(--border-mono)] pb-4"
-        >
-          {TABS.map((entry) => (
-            <Button
-              key={entry.key}
-              role="tab"
-              aria-selected={tab === entry.key}
-              variant={tab === entry.key ? 'active' : 'ghost'}
-              size="sm"
-              onClick={() => setTab(entry.key)}
-            >
-              {entry.label}
-            </Button>
-          ))}
+        <div className="mt-7 sm:mt-10 border-b border-[color:var(--border-mono)] pb-3 sm:pb-4">
+          <div
+            role="tablist"
+            aria-label="Catalogue categories"
+            className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth -mx-[18px] px-[18px] sm:mx-0 sm:px-0 sm:flex-wrap"
+          >
+            {TABS.map((entry) => (
+              <Button
+                key={entry.key}
+                role="tab"
+                aria-selected={tab === entry.key}
+                variant={tab === entry.key ? 'active' : 'ghost'}
+                size="sm"
+                className="shrink-0 px-3.5 h-9 text-xs sm:text-sm"
+                onClick={() => {
+                  setTab(entry.key);
+                  if (entry.key !== 'FLOWER' && entry.key !== 'ALL') setGradeFilter('ALL');
+                }}
+              >
+                {entry.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
+        {/* Flower Grade Filter Pills */}
+        {(tab === 'ALL' || tab === 'FLOWER') && categories.length > 0 ? (
+          <div className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-[18px] px-[18px] sm:mx-0 sm:px-0 sm:flex-wrap">
+            <span className="shrink-0 font-mono text-[11px] sm:text-xs uppercase tracking-wider text-ash pr-1">Grade:</span>
+            <Button
+              variant={gradeFilter === 'ALL' ? 'active' : 'ghost'}
+              size="sm"
+              className="shrink-0 text-xs px-3 h-8"
+              onClick={() => setGradeFilter('ALL')}
+            >
+              All Grades
+            </Button>
+            {categories.map((cat) => (
+              <Button
+                key={cat.id}
+                variant={gradeFilter === cat.id ? 'active' : 'ghost'}
+                size="sm"
+                className="shrink-0 text-xs px-3 h-8"
+                onClick={() => setGradeFilter(cat.id)}
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+
         {notice ? (
-          <p className="mt-6 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
+          <p className="mt-6 border border-foreground bg-transparent px-3.5 py-2.5 sm:px-4 sm:py-3 font-mono text-xs sm:type-ui text-foreground">
             {notice}
           </p>
         ) : null}
 
         {catalogue.error ? (
-          <p className="mt-8 border border-foreground bg-transparent px-4 py-3 font-mono type-ui text-foreground">
+          <p className="mt-8 border border-foreground bg-transparent px-3.5 py-2.5 sm:px-4 sm:py-3 font-mono text-xs sm:type-ui text-foreground">
             {catalogue.error}
           </p>
         ) : null}
 
         {/* Catalogue grid */}
-        <div className="relative mt-8">
+        <div className="relative mt-6 sm:mt-8">
           {verified ? (
-            <div className="grid gap-[18px] md:grid-cols-2 xl:grid-cols-3 xl:[&>*:nth-child(3n+2)]:mt-[78px]">
+            <div className="grid gap-6 sm:gap-[18px] md:grid-cols-2 xl:grid-cols-3 xl:[&>*:nth-child(3n+2)]:mt-[78px]">
               {entries.map((entry) => (
                 <ProductCard
                   key={entry.product.id}
                   entry={entry}
+                  gradeName={entry.product.category_id ? gradeNameById.get(entry.product.category_id) ?? null : null}
                   live={stockSync.snapshotFor(entry.product.id)}
                   liveWarning={stockSync.warnings[entry.product.id] ?? null}
                   onNotice={setNotice}
@@ -323,6 +373,30 @@ export default function ShopPage() {
         </div>
       </div>
 
+      {cartCount > 0 && !cartOpen ? (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gold/40 bg-void/95 px-4 py-3 backdrop-blur-md sm:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <span className="font-mono text-xs text-ash">
+                {cartCount} {cartCount === 1 ? 'allocation' : 'allocations'}
+              </span>
+              <span className="font-mono text-base font-bold tabular-nums text-white">
+                {formatCents(cartSubtotal)}
+              </span>
+            </div>
+            <Button
+              variant="gold"
+              size="sm"
+              onClick={() => setCartOpen(true)}
+              className="h-10 px-5 text-xs font-mono"
+            >
+              <ShoppingBag className="size-4" />
+              View Crate
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </main>
   );
@@ -334,12 +408,14 @@ export default function ShopPage() {
 
 function ProductCard({
   entry,
+  gradeName,
   live,
   liveWarning,
   onNotice,
   onAdded,
 }: {
   entry: CatalogueEntry;
+  gradeName?: string | null;
   /** Realtime snapshot from product_stock_board, when the feed is up. */
   live: StockSnapshot | null;
   liveWarning: string | null;
@@ -411,7 +487,7 @@ function ProductCard({
   return (
     <article className="flex flex-col">
       {/* Media: photography, or a hover reel once one has been generated. */}
-      <div className="relative aspect-[3/4] overflow-hidden">
+      <div className="relative aspect-[4/3] sm:aspect-[3/4] overflow-hidden">
         {product.hero_media_url && !/\.(mp4|webm)(\?|$)/i.test(product.hero_media_url) ? (
           <RevealImage src={product.hero_media_url} alt={product.name} />
         ) : product.hero_media_url ? (
@@ -430,7 +506,7 @@ function ProductCard({
           />
         ) : (
           <div className="flex size-full items-center justify-center">
-            <span className="font-display text-5xl font-black uppercase text-ash">
+            <span className="font-display text-4xl sm:text-5xl font-black uppercase text-ash">
               {UOM_SYMBOL[product.base_uom]}
             </span>
           </div>
@@ -438,6 +514,7 @@ function ProductCard({
 
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5 [&>*]:bg-void">
           {leadBatch ? <Badge tone="gold">{leadBatch.batch_code}</Badge> : null}
+          {gradeName ? <Badge tone="mono">{gradeName}</Badge> : null}
           {isLowStockLive && availableBaseQty > 0 ? (
             <Badge tone="warn">Low Stock</Badge>
           ) : null}
@@ -451,17 +528,17 @@ function ProductCard({
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 pt-[18px]">
+      <div className="flex flex-1 flex-col gap-3 sm:gap-4 pt-3.5 sm:pt-[18px]">
         <div>
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-display text-lg uppercase leading-tight text-white">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3">
+            <h3 className="font-display text-base sm:text-lg uppercase leading-tight text-white">
               {product.name}
             </h3>
-            <span className="shrink-0 font-mono type-ui text-ash">
-              {CATEGORY_LABEL[product.category]}
+            <span className="shrink-0 font-mono text-xs sm:type-ui text-ash">
+              {gradeName ? `${CATEGORY_LABEL[product.category]} · ${gradeName}` : CATEGORY_LABEL[product.category]}
             </span>
           </div>
-          <p className="mt-1.5 type-ui leading-relaxed text-ash">
+          <p className="mt-1.5 text-xs sm:text-sm md:type-ui leading-relaxed text-ash">
             {product.short_tagline}
           </p>
         </div>
@@ -483,7 +560,7 @@ function ProductCard({
             {product.terpene_tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
-                className="border border-[color:var(--border-mono)] px-2 py-0.5 font-mono type-ui text-ash"
+                className="border border-[color:var(--border-mono)] px-2 py-0.5 font-mono text-[11px] sm:text-xs text-ash"
               >
                 {tag}
               </span>
@@ -493,11 +570,11 @@ function ProductCard({
 
         {/* Live stock gauge */}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono type-ui text-ash">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-mono text-xs sm:type-ui text-ash">
               Vault Balance
             </span>
-            <span className="font-mono type-ui tabular-nums text-foreground">
+            <span className="font-mono text-xs sm:type-ui tabular-nums text-foreground">
               {availableBaseQty.toFixed(UOM_PRECISION[product.base_uom])}{' '}
               {UOM_SYMBOL[product.base_uom]} remaining
             </span>
@@ -509,14 +586,14 @@ function ProductCard({
             />
           </div>
           {committed > 0 ? (
-            <span className="font-mono type-ui text-ash">
+            <span className="font-mono text-xs sm:type-ui text-ash">
               {formatBaseQty(committed, product.base_uom)} already in your crate
             </span>
           ) : null}
 
           {/* A POS sale moved this batch while the tab was open. */}
           {liveWarning ? (
-            <span className="mt-1 border border-foreground bg-transparent px-2 py-1 font-mono type-ui text-foreground">
+            <span className="mt-1 border border-foreground bg-transparent px-2 py-1 font-mono text-xs sm:type-ui text-foreground">
               {liveWarning}
             </span>
           ) : null}
@@ -525,7 +602,7 @@ function ProductCard({
         <Separator />
 
         {/* Tier selector */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
           {sellable.map((variant) => {
             const affordable = variant.base_quantity <= headroom + 1e-9;
             return (
@@ -535,17 +612,17 @@ function ProductCard({
                 onClick={() => setSelectedId(variant.id)}
                 disabled={!affordable}
                 className={cn(
-                  'flex flex-col items-start border px-2.5 py-1.5 ',
+                  'flex min-h-[44px] flex-col items-start justify-center border px-2.5 py-2 sm:py-1.5 transition-colors',
                   selected?.id === variant.id
                     ? 'border-foreground bg-transparent text-foreground'
                     : 'border-[color:var(--border-mono)] text-ash hover:border-ash',
                   !affordable && 'cursor-not-allowed opacity-35',
                 )}
               >
-                <span className="font-mono type-ui ">
+                <span className="font-mono text-xs sm:text-sm font-medium">
                   {variant.label}
                 </span>
-                <span className="font-mono type-ui tabular-nums">
+                <span className="font-mono text-xs sm:text-sm tabular-nums">
                   {formatCents(tierPriceCents(variant, member))}
                 </span>
               </button>
@@ -558,15 +635,15 @@ function ProductCard({
           <div className="flex flex-col">
             {selected ? (
               <>
-                <span className="font-mono text-xl tabular-nums text-white">
+                <span className="font-mono text-lg sm:text-xl tabular-nums text-white">
                   {formatCents(tierPriceCents(selected, member))}
                 </span>
                 {isVipStanding(member) ? (
-                  <span className="font-mono type-ui text-foreground">
+                  <span className="font-mono text-[11px] sm:text-xs text-foreground">
                     VIP price applied
                   </span>
                 ) : (
-                  <span className="font-mono type-ui text-ash">
+                  <span className="font-mono text-[11px] sm:text-xs text-ash">
                     VIP {formatCents(vipPriceCents(selected))}
                   </span>
                 )}
@@ -579,6 +656,7 @@ function ProductCard({
             size="sm"
             disabled={!selected || selected.base_quantity > headroom + 1e-9}
             onClick={() => selected && add(selected)}
+            className="h-10 sm:h-9 px-4 text-xs sm:text-sm"
           >
             <Plus className="size-3.5" />
             Allocate
@@ -586,7 +664,7 @@ function ProductCard({
         </div>
 
         {selected && product.base_uom !== 'UNITS' ? (
-          <p className="font-mono type-ui text-ash">
+          <p className="font-mono text-[11px] sm:text-xs text-ash">
             Deducts {formatBaseQty(selected.base_quantity, product.base_uom)} ·{' '}
             {tiersAvailable(availableBaseQty, selected.base_quantity)} available
           </p>
@@ -607,12 +685,12 @@ function LabStat({
 }) {
   return (
     <div className="flex flex-col">
-      <span className="font-mono type-ui text-ash">
+      <span className="font-mono text-[11px] sm:text-xs text-ash">
         {label}
       </span>
       <span
         className={cn(
-          'font-mono type-ui tabular-nums',
+          'font-mono text-xs sm:text-sm tabular-nums',
           gold ? 'text-foreground' : 'text-foreground',
         )}
       >
@@ -660,19 +738,19 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
         aria-label="Vault crate"
         aria-hidden={!open}
         className={cn(
-          'fixed right-0 top-0 z-50 flex h-full w-[min(26rem,100vw)] flex-col border-l border-[color:var(--border-hard)] bg-surface ',
+          'fixed right-0 top-0 z-50 flex h-full w-full sm:w-[min(26rem,100vw)] flex-col border-l border-[color:var(--border-hard)] bg-surface transition-transform duration-200 ease-out',
           open ? 'translate-x-0' : 'pointer-events-none translate-x-full',
         )}
       >
-        <header className="flex items-center justify-between border-b border-[color:var(--border-mono)] px-5 py-4">
+        <header className="flex items-center justify-between border-b border-[color:var(--border-mono)] px-4 py-3 sm:px-5 sm:py-4">
           <div>
             <Eyebrow>Vault Crate</Eyebrow>
-            <p className="mt-1 font-mono type-ui text-ash">
+            <p className="mt-0.5 sm:mt-1 font-mono text-xs sm:type-ui text-ash">
               {lines.length} {lines.length === 1 ? 'allocation' : 'allocations'}
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-            <X className="size-4" />
+            <X className="size-5 sm:size-4" />
           </Button>
         </header>
 
@@ -681,14 +759,14 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
           {UOM_ORDER.map((uom) => (
             <div
               key={uom}
-              className="flex flex-col items-center gap-1 border-r border-[color:var(--border-mono)] px-2 py-3.5 last:border-r-0"
+              className="flex flex-col items-center gap-0.5 sm:gap-1 border-r border-[color:var(--border-mono)] px-1.5 py-2.5 sm:px-2 sm:py-3.5 last:border-r-0"
             >
-              <span className="font-mono type-ui text-ash">
+              <span className="font-mono text-[11px] sm:text-xs text-ash">
                 {uom === 'GRAMS' ? 'Grams' : uom === 'MILLILITERS' ? 'Millilitres' : 'Units'}
               </span>
-              <span className="font-mono type-ui tabular-nums text-foreground">
+              <span className="font-mono text-xs sm:text-sm tabular-nums text-foreground font-medium">
                 {(uomTotals[uom] ?? 0).toFixed(UOM_PRECISION[uom])}
-                <span className="ml-0.5 type-ui text-ash">
+                <span className="ml-0.5 text-[11px] sm:text-xs text-ash">
                   {UOM_SYMBOL[uom]}
                 </span>
               </span>
@@ -698,7 +776,7 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
 
         <div className="flex-1 overflow-y-auto cartel-scroll">
           {lines.length === 0 ? (
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               <EmptyState
                 title="Crate is empty"
                 description="Pick a tier from the reserve to begin your allocation."
@@ -707,45 +785,45 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
           ) : (
             <ul className="divide-y divide-[color:var(--border-mono)]">
               {lines.map((line) => (
-                <li key={line.key} className="flex flex-col gap-2.5 px-5 py-4">
+                <li key={line.key} className="flex flex-col gap-2.5 px-4 py-3.5 sm:px-5 sm:py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-display text-sm uppercase text-white">
                         {line.productName}
                       </p>
-                      <p className="mt-0.5 font-mono type-ui text-foreground">
+                      <p className="mt-0.5 font-mono text-xs sm:type-ui text-foreground">
                         {line.variantLabel}
                       </p>
                     </div>
-                    <span className="font-mono type-ui tabular-nums text-white">
+                    <span className="font-mono text-sm sm:type-ui tabular-nums text-white font-medium">
                       {formatCents(cartLineTotalCents(line))}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-2 sm:gap-3">
                     <div className="flex items-center border border-[color:var(--border-mono)]">
                       <button
                         type="button"
                         aria-label={`Decrease ${line.productName}`}
                         onClick={() => setLineQuantity(line.key, line.quantity - 1)}
-                        className="flex size-8 items-center justify-center text-ash transition-colors hover:text-foreground"
+                        className="flex size-9 sm:size-8 items-center justify-center text-ash transition-colors hover:text-foreground"
                       >
-                        <Minus className="size-3" />
+                        <Minus className="size-3.5 sm:size-3" />
                       </button>
-                      <span className="w-9 text-center font-mono type-ui tabular-nums text-white">
+                      <span className="w-8 sm:w-9 text-center font-mono text-xs sm:type-ui tabular-nums text-white">
                         {line.quantity}
                       </span>
                       <button
                         type="button"
                         aria-label={`Increase ${line.productName}`}
                         onClick={() => setLineQuantity(line.key, line.quantity + 1)}
-                        className="flex size-8 items-center justify-center text-ash transition-colors hover:text-foreground"
+                        className="flex size-9 sm:size-8 items-center justify-center text-ash transition-colors hover:text-foreground"
                       >
-                        <Plus className="size-3" />
+                        <Plus className="size-3.5 sm:size-3" />
                       </button>
                     </div>
 
-                    <span className="font-mono type-ui text-ash">
+                    <span className="font-mono text-[11px] sm:text-xs text-ash truncate">
                       {formatBaseQty(cartLineBaseQty(line), line.baseUom)} deducted
                     </span>
 
@@ -753,9 +831,9 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
                       type="button"
                       aria-label={`Remove ${line.productName}`}
                       onClick={() => removeLine(line.key)}
-                      className="text-ash transition-colors hover:text-foreground"
+                      className="p-1.5 -mr-1.5 text-ash transition-colors hover:text-foreground"
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-4 sm:size-3.5" />
                     </button>
                   </div>
                 </li>
@@ -764,28 +842,28 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
           )}
         </div>
 
-        <footer className="border-t border-[color:var(--border-mono)] p-5">
+        <footer className="border-t border-[color:var(--border-mono)] p-4 pb-6 sm:p-5">
           <div className="flex items-baseline justify-between">
-            <span className="font-mono type-ui text-ash">
+            <span className="font-mono text-xs sm:type-ui text-ash">
               Subtotal
             </span>
-            <span className="font-mono text-2xl tabular-nums text-white">
+            <span className="font-mono text-xl sm:text-2xl tabular-nums text-white font-bold">
               {formatCents(subtotal)}
             </span>
           </div>
-          <p className="mt-1 font-mono type-ui text-ash">
+          <p className="mt-1 font-mono text-[11px] sm:text-xs text-ash">
             Delivery and discounts calculated at checkout
           </p>
 
           <div className="mt-4 flex flex-col gap-2">
-            <Button variant="gold" size="lg" block disabled={lines.length === 0} asChild>
+            <Button variant="gold" size="lg" block disabled={lines.length === 0} asChild className="h-12 sm:h-14 text-sm sm:type-ui">
               <Link href="/checkout">
                 <Check className="size-4" />
                 Proceed to Checkout
               </Link>
             </Button>
             {lines.length > 0 ? (
-              <Button variant="ghost" size="sm" block onClick={clear}>
+              <Button variant="ghost" size="sm" block onClick={clear} className="h-9 text-xs sm:text-sm">
                 Empty the crate
               </Button>
             ) : null}

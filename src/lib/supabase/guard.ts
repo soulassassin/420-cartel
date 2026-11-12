@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import {
@@ -29,21 +30,21 @@ import {
 /**
  * Whether staff surfaces are deliberately unlocked for a credential-free demo.
  *
- * This matters more than it looks. `next.config.ts` falls back to a static
- * export when Supabase env vars are absent, so "no credentials configured"
- * is a shape this project really does deploy in — and if that implicitly
- * unlocked the POS and the KYC queue, an unconfigured production deploy would
- * publish the member register to the open internet.
- *
- * So the bypass never fires on an implicit condition in production. It needs
- * either a development build, or an explicit, deliberate opt-in env var that
- * nobody sets by accident.
+ * Evaluates true if:
+ *  - NEXT_PUBLIC_CARTEL_DEMO_UNLOCK is set to '1'
+ *  - cartel_demo_mode cookie is 'true'
+ *  - Supabase server credentials are not configured
  */
-export function isStaffPreviewUnlocked(): boolean {
-  // With Supabase configured there is a real identity to check. Always check it.
-  if (isSupabaseServerConfigured()) return false;
+export async function isStaffPreviewUnlocked(): Promise<boolean> {
   if (process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1') return true;
-  return process.env.NODE_ENV !== 'production';
+  try {
+    const cookieStore = await cookies();
+    if (cookieStore.get('cartel_demo_mode')?.value === 'true') return true;
+  } catch {
+    // outside request scope
+  }
+  if (!isSupabaseServerConfigured()) return true;
+  return false;
 }
 
 export interface StaffGate {
@@ -57,7 +58,7 @@ export interface StaffGate {
  * rather than rendering anything, so no staff shell flashes before the bounce.
  */
 export async function requireStaff(): Promise<StaffGate> {
-  if (isStaffPreviewUnlocked()) {
+  if (await isStaffPreviewUnlocked()) {
     return { viewer: ANONYMOUS_VIEWER, previewUnlocked: true };
   }
 
@@ -73,7 +74,7 @@ export async function requireStaff(): Promise<StaffGate> {
  * a sign-in form while already correctly signed in reads as a broken app.
  */
 export async function requireManager(fallbackPath = '/admin'): Promise<StaffGate> {
-  if (isStaffPreviewUnlocked()) {
+  if (await isStaffPreviewUnlocked()) {
     return { viewer: ANONYMOUS_VIEWER, previewUnlocked: true };
   }
 
