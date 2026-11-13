@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  ArrowLeft,
   ArrowRight,
   Building2,
   Check,
@@ -15,7 +16,6 @@ import {
   ShoppingBag,
   Sparkles,
   Trash2,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RevealImage } from '@/components/ui/RevealImage';
@@ -195,7 +195,7 @@ export default function ShopPage() {
 
           <div className="flex w-full flex-col sm:w-auto sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3">
             {branches.length > 0 ? (
-              <label className="flex w-full sm:w-auto items-center gap-2 border border-[color:var(--border-subtle)] bg-surface px-3 py-2.5 font-mono text-xs sm:type-ui text-white">
+              <label className="flex h-11 w-full sm:h-14 sm:w-auto items-center gap-2 border border-[color:var(--border-subtle)] bg-surface px-3 font-mono text-xs sm:type-ui text-white">
                 <Building2 className="size-4 shrink-0 text-gold" />
                 <select
                   aria-label="Fulfilling Dispensary Branch"
@@ -216,13 +216,13 @@ export default function ShopPage() {
             ) : null}
 
             {member ? (
-              <Card className="flex w-full sm:w-auto items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5">
+              <Card className="flex h-11 w-full sm:h-14 sm:w-auto items-center gap-3 px-3 sm:px-4">
                 <ShieldCheck className="size-4 shrink-0 text-foreground" />
                 <div className="flex flex-row sm:flex-col items-baseline sm:items-start justify-between w-full sm:w-auto gap-2 sm:gap-0">
-                  <span className="font-mono text-xs sm:type-ui text-foreground">
+                  <span className="font-mono text-xs sm:text-base sm:leading-tight text-foreground">
                     {member.member_code}
                   </span>
-                  <span className="font-mono text-[11px] sm:type-ui text-ash">
+                  <span className="font-mono text-[11px] sm:text-sm sm:leading-tight text-ash">
                     {isVipStanding(member) ? 'VIP Pricing Active' : member.status.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -313,7 +313,7 @@ export default function ShopPage() {
         {/* Catalogue grid */}
         <div className="relative mt-6 sm:mt-8">
           {verified ? (
-            <div className="grid gap-6 sm:gap-[18px] md:grid-cols-2 xl:grid-cols-3 xl:[&>*:nth-child(3n+2)]:mt-[78px]">
+            <div className="grid gap-x-6 gap-y-10 sm:gap-x-[18px] sm:gap-y-12 md:grid-cols-2 xl:grid-cols-3">
               {entries.map((entry) => (
                 <ProductCard
                   key={entry.product.id}
@@ -322,7 +322,6 @@ export default function ShopPage() {
                   live={stockSync.snapshotFor(entry.product.id)}
                   liveWarning={stockSync.warnings[entry.product.id] ?? null}
                   onNotice={setNotice}
-                  onAdded={() => setCartOpen(true)}
                 />
               ))}
             </div>
@@ -412,7 +411,6 @@ function ProductCard({
   live,
   liveWarning,
   onNotice,
-  onAdded,
 }: {
   entry: CatalogueEntry;
   gradeName?: string | null;
@@ -420,7 +418,6 @@ function ProductCard({
   live: StockSnapshot | null;
   liveWarning: string | null;
   onNotice: (message: string | null) => void;
-  onAdded: () => void;
 }) {
   const { product, variants, batches, stock } = entry;
 
@@ -446,6 +443,14 @@ function ProductCard({
   const sellable = variants.filter((variant) => !variant.is_custom_amount);
   const [selectedId, setSelectedId] = useState<string | null>(sellable[1]?.id ?? sellable[0]?.id ?? null);
   const selected = sellable.find((variant) => variant.id === selectedId) ?? sellable[0] ?? null;
+
+  // Confirms the add in place instead of throwing the crate drawer over the page.
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const timer = window.setTimeout(() => setAdded(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [added]);
 
   const leadBatch = batches.find((batch) => batch.remaining_base_qty > 0) ?? batches[0] ?? null;
   const committed = cartProductBaseQty(lines, product.id);
@@ -475,9 +480,9 @@ function ProductCard({
         unitPriceCents: tierPriceCents(variant, member),
         heroMediaUrl: product.hero_media_url,
       });
-      onAdded();
+      setAdded(true);
     },
-    [addLine, headroom, member, onAdded, onNotice, product],
+    [addLine, headroom, member, onNotice, product],
   );
 
   const gaugePct = remainingBaseQty > 0
@@ -570,7 +575,10 @@ function ProductCard({
               </span>
             ))}
           </div>
-        ) : null}
+        ) : (
+          // Holds the pill row's height so the gauge lines up across a grid row.
+          <div aria-hidden className="hidden h-[22px] md:block" />
+        )}
 
         {/* Live stock gauge */}
         <div className="flex flex-col gap-1.5">
@@ -606,7 +614,7 @@ function ProductCard({
         <Separator />
 
         {/* Tier selector */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
           {sellable.map((variant) => {
             const affordable = variant.base_quantity <= headroom + 1e-9;
             return (
@@ -615,10 +623,11 @@ function ProductCard({
                 type="button"
                 onClick={() => setSelectedId(variant.id)}
                 disabled={!affordable}
+                aria-pressed={selected?.id === variant.id}
                 className={cn(
-                  'flex min-h-[44px] flex-col items-start justify-center border px-2.5 py-2 sm:py-1.5 transition-colors',
+                  'flex min-h-[44px] flex-col items-start justify-center border px-2.5 py-2 sm:py-1.5 transition-[border-color,color,transform] duration-150 ease-out active:scale-[0.97]',
                   selected?.id === variant.id
-                    ? 'border-foreground bg-transparent text-foreground'
+                    ? 'border-gold bg-gold/10 text-gold'
                     : 'border-[color:var(--border-mono)] text-ash hover:border-ash',
                   !affordable && 'cursor-not-allowed opacity-35',
                 )}
@@ -635,7 +644,8 @@ function ProductCard({
         </div>
 
         {/* Add */}
-        <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+        <div className="mt-auto flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-end justify-between gap-3 pt-1">
           <div className="flex flex-col">
             {selected ? (
               <>
@@ -655,24 +665,41 @@ function ProductCard({
             ) : null}
           </div>
 
-          <Button
-            variant="gold"
-            size="sm"
-            disabled={!selected || selected.base_quantity > headroom + 1e-9}
-            onClick={() => selected && add(selected)}
-            className="h-10 sm:h-9 px-4 text-xs sm:text-sm"
-          >
-            <Plus className="size-3.5" />
-            Allocate
-          </Button>
         </div>
 
-        {selected && product.base_uom !== 'UNITS' ? (
-          <p className="font-mono text-[11px] sm:text-xs text-ash">
-            Deducts {formatBaseQty(selected.base_quantity, product.base_uom)} ·{' '}
-            {tiersAvailable(availableBaseQty, selected.base_quantity)} available
-          </p>
-        ) : null}
+        <Button
+          variant="gold"
+          size="default"
+          block
+          disabled={!selected || selected.base_quantity > headroom + 1e-9}
+          onClick={() => selected && add(selected)}
+          aria-live="polite"
+          className="h-12 border-gold bg-gold font-mono text-sm font-semibold uppercase tracking-wider text-void hover:bg-gold/90 hover:border-gold active:bg-gold disabled:border-[color:var(--border-mono)] disabled:bg-transparent"
+        >
+          {added ? (
+            <>
+              <Check className="size-4" />
+              Added to Vault
+            </>
+          ) : (
+            <>
+              <Plus className="size-4" />
+              Add to Vault
+              {selected ? <span className="font-normal opacity-70">· {selected.label}</span> : null}
+            </>
+          )}
+        </Button>
+
+        {/* Always rendered so the price row sits on the same line in every card. */}
+        <p className="min-h-[1lh] font-mono text-[11px] sm:text-xs text-ash">
+          {selected && product.base_uom !== 'UNITS' ? (
+            <>
+              Deducts {formatBaseQty(selected.base_quantity, product.base_uom)} ·{' '}
+              {tiersAvailable(availableBaseQty, selected.base_quantity)} available
+            </>
+          ) : null}
+        </p>
+        </div>
       </div>
     </article>
   );
@@ -746,16 +773,21 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
           open ? 'translate-x-0' : 'pointer-events-none translate-x-full',
         )}
       >
-        <header className="flex items-center justify-between border-b border-[color:var(--border-mono)] px-4 py-3 sm:px-5 sm:py-4">
-          <div>
+        <header className="flex items-center justify-between gap-3 border-b border-[color:var(--border-mono)] px-4 py-3 sm:px-5 sm:py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="-ml-1 inline-flex h-11 items-center gap-2 border border-gold/50 px-3 font-mono text-xs uppercase tracking-wider text-gold transition-[background-color,border-color,transform] duration-150 ease-out hover:border-gold hover:bg-gold/10 active:scale-[0.97]"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Vault
+          </button>
+          <div className="text-right">
             <Eyebrow>Vault Crate</Eyebrow>
             <p className="mt-0.5 sm:mt-1 font-mono text-xs sm:type-ui text-ash">
               {lines.length} {lines.length === 1 ? 'allocation' : 'allocations'}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-            <X className="size-5 sm:size-4" />
-          </Button>
         </header>
 
         {/* Multi-unit summary */}
@@ -865,6 +897,10 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <Check className="size-4" />
                 Proceed to Checkout
               </Link>
+            </Button>
+            <Button variant="outline" size="default" block onClick={onClose} className="h-11 text-xs sm:text-sm">
+              <ArrowLeft className="size-4" />
+              Keep browsing
             </Button>
             {lines.length > 0 ? (
               <Button variant="ghost" size="sm" block onClick={clear} className="h-9 text-xs sm:text-sm">
