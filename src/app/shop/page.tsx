@@ -769,8 +769,8 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
         aria-label="Vault crate"
         aria-hidden={!open}
         className={cn(
-          'fixed right-0 top-0 z-50 flex h-full w-full sm:w-[min(26rem,100vw)] flex-col border-l border-[color:var(--border-hard)] bg-surface transition-transform duration-200 ease-out',
-          open ? 'translate-x-0' : 'pointer-events-none translate-x-full',
+          'fixed right-0 top-0 z-50 flex h-full w-full sm:w-[min(26rem,100vw)] flex-col border-l border-[color:var(--border-hard)] bg-surface transition-transform ease-drawer',
+          open ? 'translate-x-0 duration-300' : 'pointer-events-none translate-x-full duration-200',
         )}
       >
         <header className="flex items-center justify-between gap-3 border-b border-[color:var(--border-mono)] px-4 py-3 sm:px-5 sm:py-4">

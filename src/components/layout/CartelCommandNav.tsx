@@ -200,8 +200,8 @@ export function CartelCommandNav() {
       {/* Slide-over drawer: mobile only */}
       <div
         className={cn(
-          'fixed inset-0 z-50 transition-opacity duration-300 ease-in-out md:hidden',
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          'fixed inset-0 z-50 transition-opacity ease-out md:hidden',
+          isOpen ? 'opacity-100 pointer-events-auto duration-300' : 'opacity-0 pointer-events-none duration-200'
         )}
         aria-hidden={!isOpen}
       >
@@ -214,8 +214,8 @@ export function CartelCommandNav() {
         {/* Drawer panel */}
         <div
           className={cn(
-            'fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-void border-l border-foreground/10 flex flex-col justify-between p-6 transition-transform duration-300 ease-in-out shadow-2xl',
-            isOpen ? 'translate-x-0' : 'translate-x-full'
+            'fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-void border-l border-foreground/10 flex flex-col justify-between p-6 transition-transform ease-drawer shadow-2xl',
+            isOpen ? 'translate-x-0 duration-400' : 'translate-x-full duration-250'
           )}
         >
           <div>
@@ -274,14 +274,14 @@ export function CartelCommandNav() {
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center py-3 px-4 border border-foreground/20 text-white font-sans text-base uppercase tracking-wider hover:border-foreground transition-colors"
+                  className="flex items-center justify-center py-3 px-4 border border-foreground/20 text-white font-sans text-base uppercase tracking-wider hover:border-foreground transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98]"
                 >
                   Log in
                 </Link>
                 <Link
                   href="/onboarding"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-colors"
+                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98]"
                 >
                   Apply for Membership
                 </Link>
@@ -305,7 +305,7 @@ export function CartelCommandNav() {
                   href="/account"
                   aria-label="Your profile"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 py-3 px-4 border border-foreground/20 text-white font-sans text-base uppercase tracking-wider hover:border-foreground transition-colors justify-center"
+                  className="flex items-center gap-2 py-3 px-4 border border-foreground/20 text-white font-sans text-base uppercase tracking-wider hover:border-foreground transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98] justify-center"
                 >
                   <User className="size-5" />
                   <span>Member Account</span>
@@ -313,7 +313,7 @@ export function CartelCommandNav() {
                 <Link
                   href="/pass"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-colors"
+                  className="flex items-center justify-center py-3 px-4 bg-gold text-black font-sans text-base uppercase tracking-wider font-semibold hover:bg-gold-bright transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98]"
                 >
                   Digital Membership Pass
                 </Link>
@@ -328,14 +328,14 @@ export function CartelCommandNav() {
                   <Link
                     href="/admin/pos"
                     onClick={() => setIsOpen(false)}
-                    className="py-2 text-center border border-foreground/20 text-xs font-mono uppercase tracking-wider text-ash hover:text-white hover:border-white transition-colors"
+                    className="py-2 text-center border border-foreground/20 text-xs font-mono uppercase tracking-wider text-ash hover:text-white hover:border-white transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98]"
                   >
                     POS Terminal
                   </Link>
                   <Link
                     href="/admin"
                     onClick={() => setIsOpen(false)}
-                    className="py-2 text-center border border-foreground/20 text-xs font-mono uppercase tracking-wider text-ash hover:text-white hover:border-white transition-colors"
+                    className="py-2 text-center border border-foreground/20 text-xs font-mono uppercase tracking-wider text-ash hover:text-white hover:border-white transition-[border-color,background-color,color,transform] duration-150 ease-out active:scale-[0.98]"
                   >
                     Back Office
                   </Link>

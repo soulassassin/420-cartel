@@ -311,9 +311,9 @@ export default function CartelAgentPage() {
                     type="button"
                     onClick={() => handleDispatchPrompt(item.prompt)}
                     disabled={isBusy}
-                    className="flex items-start gap-2.5 text-left p-3 bg-transparent hover:bg-transparent border border-ash hover:border-ash transition-all group"
+                    className="flex items-start gap-2.5 text-left p-3 bg-transparent hover:bg-transparent border border-ash hover:border-ash transition-[border-color,transform] duration-150 ease-out active:scale-[0.98] group"
                   >
-                    <Icon className="w-4 h-4 text-foreground shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <Icon className="w-4 h-4 text-foreground shrink-0 mt-0.5 group-hover:scale-105 transition-transform duration-200 ease-out" />
                     <div>
                       <div className="type-ui font-medium text-foreground group-hover:text-foreground">
                         {item.label}
@@ -590,7 +590,7 @@ export default function CartelAgentPage() {
             <button
               type="submit"
               disabled={isBusy || !input.trim()}
-              className="inline-flex shrink-0 items-center gap-2 px-4 py-3 sm:px-5 bg-foreground hover:bg-foreground/90 disabled:opacity-40 text-background font-medium type-ui transition-all"
+              className="inline-flex shrink-0 items-center gap-2 px-4 py-3 sm:px-5 bg-foreground hover:bg-foreground/90 disabled:opacity-40 text-background font-medium type-ui transition-[background-color,opacity,transform] duration-150 ease-out active:scale-[0.97]"
             >
               <Send className="w-4 h-4" />
               <span>{isBusy ? 'Thinking...' : 'Send'}</span>
@@ -602,33 +602,33 @@ export default function CartelAgentPage() {
         <footer className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             href="/shop"
-            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-[border-color,transform] duration-150 ease-out active:scale-[0.98]"
           >
             <div>
               <div className="type-ui font-mono text-foreground">03 · PRIVATE DISPENSARY</div>
               <div className="type-ui text-foreground mt-0.5">Reserve Allocation Catalogue</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-transform duration-200 ease-out" />
           </Link>
           <Link
             href="/onboarding"
-            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-[border-color,transform] duration-150 ease-out active:scale-[0.98]"
           >
             <div>
               <div className="type-ui font-mono text-foreground">02 · ONBOARDING &amp; PASS</div>
               <div className="type-ui text-foreground mt-0.5">Mint QR/NFC Member Pass</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-transform duration-200 ease-out" />
           </Link>
           <Link
             href="/admin/inventory"
-            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-all"
+            className="p-4 border border-ash bg-transparent hover:border-ash flex items-center justify-between group transition-[border-color,transform] duration-150 ease-out active:scale-[0.98]"
           >
             <div>
               <div className="type-ui font-mono text-foreground">06 · HIGGSFIELD STUDIO</div>
               <div className="type-ui text-foreground mt-0.5">Generate 9:16 Cultivar Reels</div>
             </div>
-            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-4 h-4 text-foreground group-hover:text-foreground group-hover:translate-x-1 transition-transform duration-200 ease-out" />
           </Link>
         </footer>
       </div>

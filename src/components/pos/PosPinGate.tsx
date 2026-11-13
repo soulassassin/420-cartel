@@ -332,7 +332,7 @@ export function PosPinGate({ children, previewUnlocked }: PosPinGateProps) {
             <span
               key={index}
               className={cn(
-                'size-2.5 rotate-45 border transition-colors',
+                'size-2.5 rotate-45 border',
                 index < pin.length
                   ? 'border-foreground bg-foreground'
                   : 'border-[color:var(--border-mono)] bg-transparent',
@@ -425,7 +425,7 @@ function KeypadKey({
       onClick={onClick}
       className={cn(
         'flex h-14 items-center justify-center border border-[color:var(--border-mono)]',
-        'font-mono text-lg text-white transition-colors',
+        'font-mono text-lg text-white transition-[border-color,transform] duration-100 ease-out active:scale-[0.97] active:border-[color:var(--border-hard)]',
         'hover:border-[color:var(--border-hard)] bg-transparent',
         'disabled:pointer-events-none disabled:opacity-40',
       )}

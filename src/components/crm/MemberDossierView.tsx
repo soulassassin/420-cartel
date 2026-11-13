@@ -840,7 +840,7 @@ export function MemberDossierView({ memberId }: { memberId: string }) {
                 </div>
                 <div className="h-2 w-full overflow-hidden bg-void">
                   <div
-                    className="h-full bg-gold transition-all"
+                    className="h-full bg-gold transition-[width] duration-300 ease-out"
                     style={{ width: `${Math.round(progress.progress * 100)}%` }}
                   />
                 </div>

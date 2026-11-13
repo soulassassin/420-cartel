@@ -39,7 +39,7 @@ export function ProductCard({
             alt={product.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover group-hover:scale-[1.04]"
+            className="tile-media object-cover"
           />
         ) : (
           <div className="absolute inset-0 " />
@@ -106,7 +106,7 @@ export function ProductCard({
           {gated ? (
             <Link
               href="/onboarding"
-              className="flex items-center justify-between gap-3 border border-dashed border-ash px-4 py-3 hover:border-foreground hover:bg-transparent"
+              className="flex items-center justify-between gap-3 border border-dashed border-ash px-4 py-3 hover:border-foreground hover:bg-transparent transition-colors"
             >
               <span className="flex items-center gap-2 font-mono type-ui text-foreground">
                 <Lock className="size-3" />

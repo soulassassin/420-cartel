@@ -61,11 +61,15 @@
 
     /* Motion. Everything animates transform and opacity only. */
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    /* iOS-style sheet curve for drawers. */
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    /* Hover feedback stays under 300ms; it is seen dozens of times a visit. */
+    --dur-hover: 250ms;
     --dur-fast: 200ms;
     --dur-base: 400ms;
     --dur-slow: 800ms;
     --reveal-shift: 24px;
-    --stagger: 120ms;
+    --stagger: 80ms;
   }
 
   @media (max-width: 640px) {
@@ -237,6 +241,7 @@
     height: 1px;
     background: var(--gold);
     opacity: 0;
+    transition: opacity var(--dur-fast) ease;
   }
 
   .ghost-link:hover::after,
@@ -249,7 +254,7 @@
   .nav-link,
   .nav-icon {
     color: #ffffff;
-    transition: color var(--dur-base) var(--ease-out);
+    transition: color var(--dur-fast) ease;
   }
 
   .nav-link {
@@ -266,7 +271,7 @@
     background: var(--nav-gold);
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform var(--dur-base) var(--ease-out);
+    transition: transform var(--dur-hover) var(--ease-out);
   }
 
   .nav-link:hover,
@@ -367,8 +372,8 @@
     text-transform: uppercase;
     white-space: nowrap;
     transition:
-      color var(--dur-base) var(--ease-out),
-      border-color var(--dur-base) var(--ease-out),
+      color var(--dur-hover) var(--ease-out),
+      border-color var(--dur-hover) var(--ease-out),
       transform var(--dur-fast) var(--ease-out);
   }
 
@@ -379,7 +384,7 @@
     z-index: -1;
     transform: scaleY(0);
     transform-origin: bottom;
-    transition: transform var(--dur-base) var(--ease-out);
+    transition: transform var(--dur-hover) var(--ease-out);
   }
 
   .btn-primary {
@@ -401,7 +406,7 @@
   }
 
   .btn-arrow {
-    transition: transform var(--dur-base) var(--ease-out);
+    transition: transform var(--dur-hover) var(--ease-out);
   }
 
   .btn:active {
@@ -488,6 +493,7 @@
 
   .brand-mark:active .brand-mark-inner {
     transform: scale(0.98);
+    transition-duration: 160ms;
   }
 
   @keyframes brand-in {
@@ -502,7 +508,7 @@
     }
   }
 
-  @media (hover: hover) {
+  @media (hover: hover) and (pointer: fine) {
 
     /* Both buttons fill gold on hover; black text keeps 9.6:1 on the fill. */
     .btn-primary:hover,
@@ -665,5 +671,25 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Reduced, not removed: entrances keep their fade and lose the movement. */
+  .reveal,
+  .reveal-img {
+    transform: none !important;
+    transition-property: opacity !important;
+    transition-duration: 240ms !important;
+  }
+
+  .headline-in,
+  .brand-mark {
+    animation-name: fade-in !important;
+    animation-duration: 240ms !important;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
   }
 }

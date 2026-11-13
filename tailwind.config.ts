@@ -2,6 +2,8 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   darkMode: ['class'],
+  // Hover styles only where a real pointer can hover, so taps never leave them stuck.
+  future: { hoverOnlyWhenSupported: true },
   content: ['./src/**/*.{ts,tsx,mdx}'],
   theme: {
     container: {
@@ -107,9 +109,14 @@ const config: Config = {
         'vault-radial': 'var(--gradient-vault-radial)',
         'surface-fade': 'var(--gradient-surface-fade)',
       },
+      transitionDuration: {
+        250: '250ms',
+        400: '400ms',
+      },
       transitionTimingFunction: {
         cartel: 'cubic-bezier(0.16, 1, 0.3, 1)',
         vault: 'cubic-bezier(0.76, 0, 0.24, 1)',
+        drawer: 'cubic-bezier(0.32, 0.72, 0, 1)',
       },
       keyframes: {
         'gold-sweep': {
@@ -137,6 +144,8 @@ const config: Config = {
         },
       },
       animation: {
+        // A quicker spinner reads as a quicker load.
+        spin: 'spin 750ms linear infinite',
         'gold-sweep': 'gold-sweep 6s linear infinite',
         'grain-shift': 'grain-shift 1.2s steps(4) infinite',
         'pulse-gold': 'pulse-gold 2.4s ease-in-out infinite',

@@ -842,7 +842,7 @@ export default function PosTerminalPage() {
                             disabled={!canFit}
                             onClick={() => addStandardTier(entry, variant)}
                             className={cn(
-                              'flex min-h-11 items-center justify-between gap-2 border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-colors hover:border-foreground',
+                              'flex min-h-11 items-center justify-between gap-2 border border-[color:var(--border-mono)] bg-void px-2.5 py-2 text-left font-mono transition-[border-color,transform] duration-150 ease-out hover:border-gold active:scale-[0.97]',
                               !canFit && 'cursor-not-allowed opacity-35',
                             )}
                           >
@@ -1233,35 +1233,35 @@ function ScaleModal({
         </div>
 
         <div>
-          <span className="type-ui text-ash">Quick select</span>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="type-ui text-ash">Tap to add</span>
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
             {(uom === 'GRAMS' ? [1, 2, 3.5, 5, 7, 10, 14, 28] : [5, 10, 30, 50, 100]).map(
-              (amount) => {
-                const active = randInput.trim() === '' && Number.parseFloat(weightInput) === amount;
-                return (
-                  <button
-                    key={amount}
-                    type="button"
-                    aria-pressed={active}
-                    disabled={amount > entry.stock.remaining_base_qty + 1e-9}
-                    onClick={() => {
-                      setWeightInput(String(amount));
-                      setRandInput('');
-                    }}
-                    className={cn(
-                      'min-h-11 min-w-14 border px-3 font-mono type-ui tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-35',
-                      active
-                        ? 'border-accent text-accent'
-                        : 'border-[color:var(--border-mono)] text-white hover:border-foreground',
-                    )}
-                  >
+              (amount) => (
+                // One tap rings the amount onto the ticket and closes the scale.
+                <button
+                  key={amount}
+                  type="button"
+                  disabled={amount > entry.stock.remaining_base_qty + 1e-9}
+                  onClick={() => onConfirm(amount)}
+                  className="flex min-h-12 flex-col items-center justify-center border border-[color:var(--border-mono)] px-2 font-mono tabular-nums text-white transition-[border-color,color,transform] duration-150 ease-out hover:border-gold hover:text-gold active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <span className="type-ui">
                     {amount}
                     {UOM_SYMBOL[uom]}
-                  </button>
-                );
-              },
+                  </span>
+                  <span className="text-[11px] text-ash">
+                    {formatCents(customAmountPriceCents(variant, amount, member))}
+                  </span>
+                </button>
+              ),
             )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-[color:var(--border-mono)]" />
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ash">or weigh exact</span>
+          <span className="h-px flex-1 bg-[color:var(--border-mono)]" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -212,7 +212,7 @@ function SectionHeader({ label, children }: { label: string; children: ReactNode
 const SECTION = 'pt-16 md:pt-24';
 const THREE_UP = 'grid gap-12 md:grid-cols-3 md:gap-4';
 const BODY = 'text-xl text-ash';
-const STAGGER = 120;
+const STAGGER = 80;
 
 export default function LandingPage() {
   return (
