@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Check, Copy, Download, ShieldCheck, ShieldX } from 'lucide-react';
 import { QrCode } from '@/components/ui/QrCode';
@@ -146,16 +145,7 @@ export function CartelMemberQrPass({
         {/* Gold foil header */}
         <div className="bg-foreground px-4 py-3 sm:px-5 sm:py-3.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/fourtwentycartel_logo.jpg"
-                alt="420 Cartel"
-                width={28}
-                height={28}
-                className="rounded-full sm:size-8"
-              />
-              <BrandLogo />
-            </div>
+            <BrandLogo />
             <span className="font-mono text-xs sm:type-ui font-medium text-black/80">
               Member Pass
             </span>

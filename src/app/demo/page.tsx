@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -19,7 +18,6 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
-import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Badge, Card, Eyebrow } from '@/components/ui/surfaces';
 import { resetLocalDb } from '@/lib/demo/engine';
@@ -81,16 +79,6 @@ export default function DemoAccessPage() {
         {/* Header section */}
         <div className="flex flex-col gap-4 border-b border-[color:var(--border-mono)] pb-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="relative size-12 overflow-hidden rounded-full border border-gold/30">
-              <Image
-                src="/fourtwentycartel_logo.jpg"
-                alt="420 Cartel"
-                fill
-                sizes="48px"
-                className="object-cover"
-                priority
-              />
-            </div>
             <div>
               <div className="flex items-center gap-2">
                 <Eyebrow>Operations Demo Hub</Eyebrow>

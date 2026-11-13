@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { CountUp } from '@/components/home/CountUp';
@@ -420,16 +419,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="overflow-hidden pb-4 pt-16 md:pt-24">
-        <div className="flex items-center gap-4 mb-8">
-          <Image
-            src="/fourtwentycartel_logo.jpg"
-            alt="420 Cartel"
-            width={64}
-            height={64}
-            className="rounded-full border border-gold/30 object-cover"
-          />
-          <BrandLogo />
-        </div>
+        <BrandLogo className="mb-8" />
         <div className="flex flex-wrap justify-between gap-x-12 gap-y-4 text-base">
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
             {FOOTER_LINKS.map((link) => (

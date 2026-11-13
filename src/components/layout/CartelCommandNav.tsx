@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -132,18 +131,8 @@ export function CartelCommandNav() {
     <header className="relative flex items-center justify-between gap-6 bg-void px-4 pb-4 pt-6 print:hidden md:px-12 md:pb-6 md:pt-8">
       {/* Brand logo, alone, at the same size on every page */}
       <Link href="/" aria-label="420 Cartel home" className="brand-mark block shrink-0">
-        <div className="brand-mark-inner flex items-center gap-3">
-          <div className="relative size-10 overflow-hidden rounded-full border border-gold/30 md:hidden">
-            <Image
-              src="/fourtwentycartel_logo.jpg"
-              alt="420 Cartel"
-              fill
-              sizes="40px"
-              className="object-cover"
-              priority
-            />
-          </div>
-          <BrandLogo priority className="hidden md:block" />
+        <div className="brand-mark-inner">
+          <BrandLogo priority />
         </div>
       </Link>
 
@@ -236,17 +225,8 @@ export function CartelCommandNav() {
                 href="/"
                 onClick={() => setIsOpen(false)}
                 aria-label="420 Cartel home"
-                className="flex items-center gap-3"
+                className="block"
               >
-                <div className="relative size-10 overflow-hidden rounded-full border border-gold/30">
-                  <Image
-                    src="/fourtwentycartel_logo.jpg"
-                    alt="420 Cartel"
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                  />
-                </div>
                 <BrandLogo />
               </Link>
               <button
