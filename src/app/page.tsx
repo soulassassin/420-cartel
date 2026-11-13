@@ -450,11 +450,16 @@ export default function LandingPage() {
             Daily 09:00 - 20:00 &middot; Strictly 18+ verified members only. Cannabis for Private Purposes Act compliance. Johannesburg, ZA.
           </p>
         </div>
-        <p
-          aria-hidden="true"
-          className="mt-12 whitespace-nowrap font-display text-[20.5vw] uppercase leading-[0.95]"
-        >
-          420 Cartel
+        <p className="mt-10 border-t border-[color:var(--border-mono)] pt-6 text-sm text-ash">
+          Designed and distributed by{' '}
+          <a
+            href="https://synapsesnetworking.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ghost-link text-white"
+          >
+            Synapses Networking
+          </a>
         </p>
       </footer>
     </main>
