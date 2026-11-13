@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { IS_LOCAL_PREVIEW, isDemoModeActive } from '@/lib/data/source';
-import { createCartelBrowserClient } from '@/lib/supabase/client';
+import { IS_LOCAL_PREVIEW, isDemoModeActive } from '@/lib/data/mode';
 import { useSessionStore } from '@/lib/store/session';
 
 /**
@@ -54,6 +53,8 @@ export function CartelCommandNav() {
   const pathname = usePathname();
   const [isStaff, setIsStaff] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  /** The user whose staff flag and member row were last fetched. */
+  const checkedUserId = useRef<string | null>(null);
   const member = useSessionStore((state) => state.member);
 
   // Scroll lock when mobile drawer is open
@@ -89,20 +90,39 @@ export function CartelCommandNav() {
       return;
     }
     let cancelled = false;
+    const session = useSessionStore.getState();
+
+    // Supabase keeps the session in a readable `sb-<ref>-auth-token` cookie.
+    // No cookie means nobody is signed in, so anonymous visitors never
+    // download the Supabase client at all; it stays out of the shared bundle.
+    if (!/(?:^|;\s*)sb-[^=]*-auth-token/.test(document.cookie)) {
+      if (session.member) session.signOut();
+      checkedUserId.current = null;
+      return;
+    }
 
     void (async () => {
       try {
+        const { createCartelBrowserClient } = await import('@/lib/supabase/client');
         const supabase = createCartelBrowserClient();
+        // The nav only decides what to display; the proxy and RLS are the
+        // security boundary. The locally stored session avoids an auth-server
+        // round trip on every navigation.
         const {
-          data: { user },
-        } = await supabase.auth.getUser();
+          data: { session: authSession },
+        } = await supabase.auth.getSession();
+        const user = authSession?.user ?? null;
         if (cancelled) return;
 
-        const session = useSessionStore.getState();
         if (!user) {
           if (session.member) session.signOut();
+          checkedUserId.current = null;
           return;
         }
+
+        // Same person as last time: their staff flag and member row are
+        // already in state, so skip the two queries on page-to-page clicks.
+        if (checkedUserId.current === user.id) return;
 
         const [{ data: staff }, { data: member }] = await Promise.all([
           supabase.from('staff_profiles').select('is_active').eq('id', user.id).maybeSingle(),
@@ -110,8 +130,9 @@ export function CartelCommandNav() {
         ]);
         if (cancelled) return;
 
+        checkedUserId.current = user.id;
         setIsStaff(Boolean(staff?.is_active));
-        if (member) session.signIn(member);
+        if (member) useSessionStore.getState().signIn(member);
       } catch {
         // Leave the staff links hidden.
       }
@@ -200,8 +221,13 @@ export function CartelCommandNav() {
       {/* Slide-over drawer: mobile only */}
       <div
         className={cn(
-          'fixed inset-0 z-50 transition-opacity ease-out md:hidden',
-          isOpen ? 'opacity-100 pointer-events-auto duration-300' : 'opacity-0 pointer-events-none duration-200'
+          // `invisible` once closed takes the full-screen blur out of painting
+          // entirely; at opacity 0 alone it is still composited every frame.
+          // Visibility flips at the end of the fade-out and at the start of the fade-in.
+          'fixed inset-0 z-50 transition-[opacity,visibility] ease-out md:hidden',
+          isOpen
+            ? 'visible opacity-100 pointer-events-auto duration-300'
+            : 'invisible opacity-0 pointer-events-none duration-200'
         )}
         aria-hidden={!isOpen}
       >

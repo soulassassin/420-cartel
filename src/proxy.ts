@@ -4,7 +4,7 @@ import type { Database } from '@/types/database';
 import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE, affiliateTracker } from '@/lib/loyalty';
 
 /**
- * Middleware does three jobs:
+ * The proxy does three jobs:
  *
  *  1. Refreshes the Supabase session cookie so Server Components always see a
  *     live token (the server client cannot write cookies during render).
@@ -20,7 +20,7 @@ const STAFF_ROUTES = ['/pos', '/admin'];
 /** The one place staff sign in. It sits under /admin but must stay reachable signed out. */
 const STAFF_LOGIN = '/admin/login';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
   let response = NextResponse.next({

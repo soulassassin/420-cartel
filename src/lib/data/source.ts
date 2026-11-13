@@ -81,51 +81,15 @@ import {
   type LocalUpdateMemberCrmPatch,
 } from '@/lib/demo/engine';
 
-export type DataMode = 'SUPABASE' | 'LOCAL';
-
-export function isDemoModeActive(): boolean {
-  if (typeof window !== 'undefined') {
-    try {
-      if (window.localStorage.getItem('cartel-demo-mode') === 'true') return true;
-      if (document.cookie.includes('cartel_demo_mode=true')) return true;
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('demo') === '1' || params.get('demo') === 'true') return true;
-    } catch {
-      // Storage or cookie read blocked
-    }
-  }
-  if (process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1') return true;
-  return !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-}
-
-export function setDemoMode(enabled: boolean): void {
-  if (typeof window !== 'undefined') {
-    try {
-      if (enabled) {
-        window.localStorage.setItem('cartel-demo-mode', 'true');
-        document.cookie = 'cartel_demo_mode=true; path=/; max-age=86400; SameSite=Lax';
-      } else {
-        window.localStorage.removeItem('cartel-demo-mode');
-        document.cookie = 'cartel_demo_mode=; path=/; max-age=0; SameSite=Lax';
-      }
-    } catch {
-      // storage blocked
-    }
-  }
-}
-
-export function dataMode(): DataMode {
-  return isDemoModeActive() ? 'LOCAL' : 'SUPABASE';
-}
-
-export const IS_LOCAL_PREVIEW =
-  process.env.NEXT_PUBLIC_CARTEL_DEMO_UNLOCK === '1' ||
-  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-export function isLocalMode(): boolean {
-  return IS_LOCAL_PREVIEW || isDemoModeActive();
-}
+export {
+  type DataMode,
+  isDemoModeActive,
+  setDemoMode,
+  dataMode,
+  IS_LOCAL_PREVIEW,
+  isLocalMode,
+} from '@/lib/data/mode';
+import { isLocalMode } from '@/lib/data/mode';
 
 /** A product with everything the catalogue, POS and admin grids need. */
 export interface CatalogueEntry {
@@ -170,6 +134,16 @@ export async function listBranches(): Promise<BranchRow[]> {
   return data ?? [];
 }
 
+function groupByProduct<T extends { product_id: string | null }>(rows: T[]): Map<string | null, T[]> {
+  const groups = new Map<string | null, T[]>();
+  for (const row of rows) {
+    const group = groups.get(row.product_id);
+    if (group) group.push(row);
+    else groups.set(row.product_id, [row]);
+  }
+  return groups;
+}
+
 export async function listCatalogue(branchId: string): Promise<CatalogueEntry[]> {
   if (isLocalMode()) {
     const db = readLocalDb();
@@ -199,16 +173,19 @@ export async function listCatalogue(branchId: string): Promise<CatalogueEntry[]>
   const failure = products.error ?? variants.error ?? batches.error ?? levels.error;
   if (failure) throw wrap(failure);
 
+  // Group each table by product once, rather than scanning every table for
+  // every product. Rows keep the order the queries returned them in.
+  const variantsByProduct = groupByProduct(variants.data ?? []);
+  const batchesByProduct = groupByProduct(batches.data ?? []);
+  const levelByProduct = new Map((levels.data ?? []).map((row) => [row.product_id, row]));
+
   return (products.data ?? []).map((product) => {
-    const productBatches = (batches.data ?? []).filter(
-      (batch) => batch.product_id === product.id,
-    );
-    const level = (levels.data ?? []).find((row) => row.product_id === product.id);
+    const level = levelByProduct.get(product.id);
 
     return {
       product,
-      variants: (variants.data ?? []).filter((variant) => variant.product_id === product.id),
-      batches: productBatches,
+      variants: variantsByProduct.get(product.id) ?? [],
+      batches: batchesByProduct.get(product.id) ?? [],
       stock:
         level ?? {
           product_id: product.id,
@@ -245,6 +222,18 @@ export async function listMembers(): Promise<MemberRow[]> {
     .limit(500);
   if (error) throw wrap(error);
   return (data ?? []).map(normalizeMember);
+}
+
+/** One member by id: a single-row read, for refreshing the signed-in member. */
+export async function getMember(memberId: string): Promise<MemberRow | null> {
+  if (isLocalMode()) {
+    const member = readLocalDb().members.find((row) => row.id === memberId);
+    return member ? normalizeMember(member) : null;
+  }
+  const supabase = createCartelBrowserClient();
+  const { data, error } = await supabase.from('members').select('*').eq('id', memberId).maybeSingle();
+  if (error) throw wrap(error);
+  return data ? normalizeMember(data) : null;
 }
 
 export async function lookupMembers(query: string): Promise<MemberRow[]> {

@@ -452,7 +452,7 @@ export const cartelRewardEngine = new CartelLoyaltyAndAffiliateEngine();
  * is an attribution hint, not a credential — the authoritative check is the
  * `affiliate_codes` lookup inside `process_cartel_order`.
  *
- * `src/middleware.ts` performs the capture on every page request.
+ * `src/proxy.ts` performs the capture on every page request.
  */
 export function referralCookieAttributes(
   config: CartelRewardConfig = CARTEL_REWARD_CONFIG,

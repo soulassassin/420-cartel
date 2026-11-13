@@ -13,7 +13,10 @@ const nextConfig: NextConfig = {
   images: {
     // Resize and re-encode on every deployment. Only a static export has no
     // image server to do it, so only that build ships the originals.
-    unoptimized: isStaticExport,
+    // `next dev` skips it too: AVIF encoding costs ~10s per image on first
+    // request, which left the dev home page loading for minutes. Local files
+    // need no resizing to arrive instantly, and production is unchanged.
+    unoptimized: isStaticExport || process.env.NODE_ENV === 'development',
     formats: ['image/avif', 'image/webp'],
     qualities: [75],
     // Product photography changes rarely; keep optimised variants for a month.

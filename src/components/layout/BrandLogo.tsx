@@ -26,7 +26,8 @@ export function BrandLogo({
       alt="Four Twenty Cartel"
       width={LOGO_WIDTH}
       height={LOGO_HEIGHT}
-      priority={priority}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
       sizes="(min-width: 768px) 101px, 64px"
       className={cn('block h-20 w-auto shrink-0 md:h-32', className)}
     />

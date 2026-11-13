@@ -41,7 +41,7 @@ export async function createCartelServerClient() {
           }
         } catch {
           // Called from a Server Component render, where cookies are read-only.
-          // middleware.ts owns session refresh, so this is safe to ignore.
+          // proxy.ts owns session refresh, so this is safe to ignore.
         }
       },
     },

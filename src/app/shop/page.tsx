@@ -35,8 +35,8 @@ import {
   listBranches,
   listCatalogue,
   listCategories,
+  getMember,
   listMembers,
-  subscribeToData,
   type CatalogueEntry,
 } from '@/lib/data/source';
 import { useCartelQuery } from '@/lib/data/useCartelQuery';
@@ -110,10 +110,6 @@ export default function ShopPage() {
   );
   const catalogue = useCartelQuery(() => listCatalogue(branchId), [branchId]);
 
-  useEffect(() => {
-    return subscribeToData(() => catalogue.refresh());
-  }, [catalogue]);
-
   /**
    * Live stock for this branch.
    *
@@ -128,9 +124,8 @@ export default function ShopPage() {
   const memberId = member?.id ?? null;
   useEffect(() => {
     if (!memberId) return;
-    void listMembers()
-      .then((rows) => {
-        const fresh = rows.find((row) => row.id === memberId);
+    void getMember(memberId)
+      .then((fresh) => {
         if (fresh) syncMember(fresh);
       })
       .catch(() => undefined);

@@ -105,7 +105,7 @@ export default function OnboardingPage() {
       .catch(() => undefined);
   }, []);
 
-  // Pick up `?ref=CARTEL-XXXX`, which middleware parked in a cookie.
+  // Pick up `?ref=CARTEL-XXXX`, which the proxy parked in a cookie.
   useEffect(() => {
     const fromQuery = new URLSearchParams(window.location.search).get('ref');
     const fromCookie = document.cookie

@@ -18,9 +18,9 @@ import {
  *
  * Layering, outermost first — each layer is independently sufficient:
  *
- *   1. middleware.ts   bounces non-staff before a staff shell is ever rendered
+ *   1. proxy.ts        bounces non-staff before a staff shell is ever rendered
  *   2. these guards    re-check during render, for direct navigations and for
- *                      anything middleware's matcher does not cover
+ *                      anything the proxy matcher does not cover
  *   3. Postgres RLS    the only boundary that actually protects the DATA
  *
  * The nav's staff-group filtering is NOT in this list on purpose: hiding a

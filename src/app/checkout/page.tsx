@@ -31,6 +31,7 @@ import {
   getLoyaltyRules,
   isLocalMode,
   listBranches,
+  getMember,
   listMembers,
   processOrder,
   resolveDeliveryZone,
@@ -440,8 +441,7 @@ export default function CheckoutPage() {
       }
 
       // Refresh member balance
-      const freshMembers = await listMembers();
-      const updated = freshMembers.find((row) => row.id === member.id);
+      const updated = await getMember(member.id);
       if (updated) syncMember(updated);
     } catch (caught) {
       await syncCartReservations({

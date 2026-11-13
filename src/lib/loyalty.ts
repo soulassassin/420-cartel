@@ -85,7 +85,7 @@ export interface AffiliateAttributionDraft {
 
 /**
  * The seam for referral attribution. `?ref=CARTEL-XXXX` is captured by
- * middleware into a first-party cookie, read at onboarding (signup credit) and
+ * proxy into a first-party cookie, read at onboarding (signup credit) and
  * again at checkout (order credit).
  */
 export interface AffiliateTracker {
